@@ -16,7 +16,7 @@ export function Layout() {
   const { user, logout } = useAuth();
   const { lists, folders, refresh, error } = useAppData();
   const navigate = useNavigate();
-  const isAdmin = !!user?.isAdmin;
+  const canWork = !!user?.canWork;
   const [menuOpen, setMenuOpen] = useState(false);
   const [collapsed, setCollapsed] = useState<Set<string>>(new Set());
   const [prompt, setPrompt] = useState<Prompt | null>(null);
@@ -90,13 +90,13 @@ export function Layout() {
           {inbox && listLink(inbox)}
           <li><NavLink to="/agenda" onClick={close}>Agenda</NavLink></li>
           <li><NavLink to="/priority" onClick={close}>Priority</NavLink></li>
-          {isAdmin && <li><NavLink to="/recurring" onClick={close}>Recurring</NavLink></li>}
+          {canWork && <li><NavLink to="/recurring" onClick={close}>Recurring</NavLink></li>}
         </ul>
 
         <div className="nav-section">
           <h2>Lists</h2>
           <span className="spacer" />
-          {isAdmin && (
+          {canWork && (
             <>
               <button type="button" className="icon-btn" aria-label="New folder" title="New folder" onClick={() => setPrompt({ kind: 'folder' })}>
                 🗀
@@ -119,7 +119,7 @@ export function Layout() {
                   <button type="button" className="folder-toggle" aria-expanded={!isCollapsed} onClick={() => toggle(f.folderId)}>
                     <span aria-hidden>{isCollapsed ? '▸' : '▾'}</span> {f.name}
                   </button>
-                  {isAdmin && <>
+                  {canWork && <>
                   <button type="button" className="icon-btn small" aria-label={`New list in ${f.name}`} title="New list here" onClick={() => setPrompt({ kind: 'list', folderId: f.folderId })}>＋</button>
                   <button type="button" className="icon-btn small" aria-label={`Rename folder ${f.name}`} title="Rename folder" onClick={() => setPrompt({ kind: 'rename-folder', folderId: f.folderId, name: f.name })}>✎</button>
                   <button type="button" className="icon-btn small" aria-label={`Delete folder ${f.name}`} title="Delete folder" onClick={() => setDeleteFolderId(f.folderId)}>✕</button>

@@ -2,6 +2,8 @@ import { useState } from 'react';
 import { api, type Criticality, type Item } from '../lib/api';
 import { ConfirmDialog } from './ConfirmDialog';
 import { useAuth } from '../lib/useAuth';
+import { useAppData } from '../lib/AppData';
+import { compareText } from '../lib/sort';
 
 interface Props {
   item: Item;
@@ -17,7 +19,8 @@ interface Props {
  * text fields reset when another item is opened.
  */
 export function ItemDetail({ item, onChange, onError, onClose }: Props) {
-  const isAdmin = !!useAuth().user?.isAdmin;
+  const canWork = !!useAuth().user?.canWork;
+  const { lists, refresh } = useAppData();
   const [confirmDelete, setConfirmDelete] = useState(false);
   const [busy, setBusy] = useState(false);
   const [newSub, setNewSub] = useState('');
@@ -54,7 +57,7 @@ export function ItemDetail({ item, onChange, onError, onClose }: Props) {
                 }
               />
               <span className="sub-title">{s.title}</span>
-              {isAdmin && <button
+              {canWork && <button
                 type="button"
                 className="icon-btn"
                 aria-label={`Remove subitem ${s.title}`}
@@ -122,6 +125,24 @@ export function ItemDetail({ item, onChange, onError, onClose }: Props) {
         </div>
 
         <label className="field">
+          <span>List</span>
+          <select
+            value={item.listId}
+            disabled={busy}
+            onChange={(e) =>
+              run(() => api.moveItem(item.listId, item.itemId, e.target.value), (moved) => {
+                onChange(moved);
+                void refresh(); // the open counts in the navigation change
+              })
+            }
+          >
+            {[...lists].sort((a, b) => (a.isInbox === b.isInbox ? compareText(a.name, b.name) : a.isInbox ? -1 : 1)).map((l) => (
+              <option key={l.listId} value={l.listId}>{l.name}</option>
+            ))}
+          </select>
+        </label>
+
+        <label className="field">
           <span>Notes</span>
           <textarea
             value={notes}
@@ -135,7 +156,7 @@ export function ItemDetail({ item, onChange, onError, onClose }: Props) {
           />
         </label>
 
-        {isAdmin && (
+        {canWork && (
           <button type="button" className="icon-btn delete-btn" aria-label="Delete item" title="Delete item" onClick={() => setConfirmDelete(true)}>
             <svg viewBox="0 0 24 24" width="20" height="20" aria-hidden="true" fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round">
               <path d="M3 6h18M8 6V4h8v2M6 6l1 14h10l1-14M10 11v6M14 11v6" />

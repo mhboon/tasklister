@@ -40,7 +40,7 @@ export default function App() {
         <Route path="lists/:listId" element={<ListPage />} />
         <Route path="agenda" element={<AgendaPage />} />
         <Route path="priority" element={<PriorityPage />} />
-        <Route path="recurring" element={<ProtectedRoute requireAdmin><RecurringPage /></ProtectedRoute>} />
+        <Route path="recurring" element={<ProtectedRoute requireWork><RecurringPage /></ProtectedRoute>} />
         <Route path="users" element={<ProtectedRoute requireAdmin><UsersPage /></ProtectedRoute>} />
         <Route path="share" element={<SharePage />} />
         <Route path="account" element={<AccountPage />} />

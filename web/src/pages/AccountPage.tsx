@@ -29,7 +29,7 @@ export function AccountPage() {
   return (
     <section className="page narrow">
       <h1>Account</h1>
-      <p>Signed in as <strong>{user?.email}</strong>{user?.isAdmin ? ' (admin)' : ''}.</p>
+      <p>Signed in as <strong>{user?.email}</strong>{user ? ` (${user.role.toLowerCase()})` : ''}.</p>
       <form className="card" onSubmit={submit}>
         <h2>Change password</h2>
         <label className="field"><span>Current password</span>

@@ -26,9 +26,14 @@ export async function getList(listId: string): Promise<ListRow | undefined> {
   return res.Item as ListRow | undefined;
 }
 
-/** Guests may only work on items of lists shared with them. */
+/** Managing people is for admins only. */
 export function requireAdmin(ctx: Ctx): void {
-  if (!ctx.isAdmin) throw new UserError('Only admins can do that.');
+  if (ctx.role !== 'ADMIN') throw new UserError('Only admins can do that.');
+}
+
+/** Guests may only work on items of lists shared with them; users and admins have a workspace of their own. */
+export function requireUser(ctx: Ctx): void {
+  if (ctx.role === 'GUEST') throw new UserError('Guests can only work on lists shared with them.');
 }
 
 export const inboxId = (userId: string) => `inbox-${userId}`;

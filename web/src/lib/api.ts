@@ -4,7 +4,8 @@ export type Criticality = 'HIGH' | 'MEDIUM' | 'LOW';
 export type Status = 'OPEN' | 'DONE';
 export type Frequency = 'DAILY' | 'WEEKLY' | 'MONTHLY';
 
-export interface User { userId: string; email: string; displayName: string; isAdmin: boolean; enabled: boolean }
+export type Role = 'ADMIN' | 'USER' | 'GUEST';
+export interface User { userId: string; email: string; displayName: string; role: Role; isAdmin: boolean; enabled: boolean }
 export interface Folder { folderId: string; name: string }
 export interface ListSummary {
   listId: string; name: string; ownerId: string; ownerName: string;
@@ -28,7 +29,7 @@ export interface RecurringInput {
   criticality?: Criticality | null; active?: boolean;
 }
 
-const USER = 'userId email displayName isAdmin enabled';
+const USER = 'userId email displayName role isAdmin enabled';
 const LIST = 'listId name ownerId ownerName isOwner isInbox folderId memberCount openCount';
 const MEMBER = 'userId email displayName isOwner';
 const ITEM = `itemId listId listName title notes status dueDate criticality recurringId createdAt completedAt
@@ -43,11 +44,11 @@ async function q<K extends string, T>(key: K, query: string, vars?: Record<strin
 export const api = {
   me: () => q<'me', User>('me', `query { me { ${USER} } }`),
   listUsers: () => q<'listUsers', User[]>('listUsers', `query { listUsers { ${USER} } }`),
-  createUser: (email: string, displayName: string, isAdmin: boolean) =>
+  createUser: (email: string, displayName: string, role: Role) =>
     q<'createUser', { user: User; temporaryPassword: string }>(
       'createUser',
-      `mutation($email:String!,$displayName:String!,$isAdmin:Boolean){ createUser(email:$email,displayName:$displayName,isAdmin:$isAdmin){ user{${USER}} temporaryPassword } }`,
-      { email, displayName, isAdmin }
+      `mutation($email:String!,$displayName:String!,$role:Role!){ createUser(email:$email,displayName:$displayName,role:$role){ user{${USER}} temporaryPassword } }`,
+      { email, displayName, role }
     ),
   resetUserPassword: (userId: string) =>
     q<'resetUserPassword', { user: User; temporaryPassword: string }>(
@@ -62,11 +63,11 @@ export const api = {
       { userId, enabled }
     ),
 
-  setUserAdmin: (userId: string, isAdmin: boolean) =>
-    q<'setUserAdmin', User>(
-      'setUserAdmin',
-      `mutation($userId:ID!,$isAdmin:Boolean!){ setUserAdmin(userId:$userId,isAdmin:$isAdmin){ ${USER} } }`,
-      { userId, isAdmin }
+  setUserRole: (userId: string, role: Role) =>
+    q<'setUserRole', User>(
+      'setUserRole',
+      `mutation($userId:ID!,$role:Role!){ setUserRole(userId:$userId,role:$role){ ${USER} } }`,
+      { userId, role }
     ),
 
   listFolders: () => q<'listFolders', Folder[]>('listFolders', `query { listFolders { folderId name } }`),
@@ -148,6 +149,12 @@ export const api = {
       'setItemStatus',
       `mutation($listId:ID!,$itemId:ID!,$status:Status!){ setItemStatus(listId:$listId,itemId:$itemId,status:$status){ ${ITEM} } }`,
       { listId, itemId, status }
+    ),
+  moveItem: (listId: string, itemId: string, targetListId: string) =>
+    q<'moveItem', Item>(
+      'moveItem',
+      `mutation($listId:ID!,$itemId:ID!,$targetListId:ID!){ moveItem(listId:$listId,itemId:$itemId,targetListId:$targetListId){ ${ITEM} } }`,
+      { listId, itemId, targetListId }
     ),
   deleteItem: (listId: string, itemId: string) =>
     q<'deleteItem', boolean>(

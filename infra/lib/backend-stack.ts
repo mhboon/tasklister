@@ -66,6 +66,12 @@ export class TasklisterBackendStack extends Stack {
       userPoolId: userPool.userPoolId,
       groupName: 'Admins',
     });
+    // Regular people: a workspace of their own, but no user management.
+    // Everyone in neither group is a guest (shared lists only).
+    new cognito.CfnUserPoolGroup(this, 'UsersGroup', {
+      userPoolId: userPool.userPoolId,
+      groupName: 'Users',
+    });
     const userPoolClient = userPool.addClient('WebClient', {
       authFlows: { userSrp: true },
       preventUserExistenceErrors: true,
@@ -132,10 +138,10 @@ export class TasklisterBackendStack extends Stack {
         'listAgenda', 'listPriority', 'listRecurring',
       ],
       Mutation: [
-        'createUser', 'resetUserPassword', 'setUserEnabled', 'setUserAdmin',
+        'createUser', 'resetUserPassword', 'setUserEnabled', 'setUserRole',
         'createFolder', 'renameFolder', 'deleteFolder',
         'createList', 'renameList', 'deleteList', 'moveList', 'shareList', 'unshareList',
-        'createItem', 'updateItem', 'setItemStatus', 'deleteItem',
+        'createItem', 'updateItem', 'setItemStatus', 'moveItem', 'deleteItem',
         'addSubitem', 'setSubitemStatus', 'deleteSubitem',
         'createRecurring', 'updateRecurring', 'deleteRecurring',
       ],

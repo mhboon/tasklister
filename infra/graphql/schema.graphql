@@ -15,10 +15,18 @@ enum Frequency {
   MONTHLY
 }
 
+enum Role {
+  ADMIN
+  USER
+  GUEST
+}
+
 type User {
   userId: ID!
   email: String!
   displayName: String!
+  "ADMIN manages people; USER has a workspace of their own; GUEST only sees lists shared with them."
+  role: Role!
   isAdmin: Boolean!
   enabled: Boolean!
 }
@@ -136,11 +144,11 @@ type Query {
 
 type Mutation {
   # --- admin: who is authorized to use the app at all
-  createUser(email: String!, displayName: String!, isAdmin: Boolean): UserWithPassword!
+  createUser(email: String!, displayName: String!, role: Role!): UserWithPassword!
   resetUserPassword(userId: ID!): UserWithPassword!
   setUserEnabled(userId: ID!, enabled: Boolean!): User!
-  "Promote a guest to admin, or demote. Applies from their next sign-in."
-  setUserAdmin(userId: ID!, isAdmin: Boolean!): User!
+  "Admin only. One step at a time: GUEST ⇄ USER ⇄ ADMIN. The person is signed out so the new role applies."
+  setUserRole(userId: ID!, role: Role!): User!
 
   # --- folders (personal to the caller)
   createFolder(name: String!): Folder!
@@ -163,6 +171,8 @@ type Mutation {
   createItem(listId: ID!, title: String!, notes: String, dueDate: String, criticality: Criticality): Item!
   updateItem(listId: ID!, itemId: ID!, patch: ItemPatch!): Item!
   setItemStatus(listId: ID!, itemId: ID!, status: Status!): Item!
+  "Moves the item and its subitems to another list the caller can access."
+  moveItem(listId: ID!, itemId: ID!, targetListId: ID!): Item!
   deleteItem(listId: ID!, itemId: ID!): Boolean!
   addSubitem(listId: ID!, itemId: ID!, title: String!): Item!
   setSubitemStatus(listId: ID!, itemId: ID!, subitemId: ID!, status: Status!): Item!

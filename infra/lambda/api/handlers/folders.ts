@@ -1,6 +1,6 @@
 import { GetCommand, PutCommand, UpdateCommand, DeleteCommand } from '@aws-sdk/lib-dynamodb';
 import { ddb, tables, newId, queryAll, UserError } from '../../shared/db';
-import { requireAdmin } from '../../shared/access';
+import { requireUser } from '../../shared/access';
 import { compareText } from '../../shared/text';
 import { cleanName } from '../../shared/validate';
 import type { Ctx, FolderRow, MemberRow } from '../../shared/types';
@@ -24,14 +24,14 @@ export async function listFolders(ctx: Ctx) {
 }
 
 export async function createFolder(ctx: Ctx, args: { name: string }) {
-  requireAdmin(ctx);
+  requireUser(ctx);
   const row: FolderRow = { ownerId: ctx.userId, folderId: newId(), name: cleanName(args.name, 'Folder name') };
   await ddb.send(new PutCommand({ TableName: tables.folders, Item: row }));
   return dto(row);
 }
 
 export async function renameFolder(ctx: Ctx, args: { folderId: string; name: string }) {
-  requireAdmin(ctx);
+  requireUser(ctx);
   const f = await requireFolder(ctx, args.folderId);
   const name = cleanName(args.name, 'Folder name');
   await ddb.send(
@@ -48,7 +48,7 @@ export async function renameFolder(ctx: Ctx, args: { folderId: string; name: str
 
 /** Lists inside the folder fall back to the root; nothing else is deleted. */
 export async function deleteFolder(ctx: Ctx, args: { folderId: string }) {
-  requireAdmin(ctx);
+  requireUser(ctx);
   await requireFolder(ctx, args.folderId);
   const memberships = await queryAll<MemberRow>({
     TableName: tables.members,

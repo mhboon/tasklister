@@ -1,9 +1,13 @@
 export type Criticality = 'HIGH' | 'MEDIUM' | 'LOW';
 export type Status = 'OPEN' | 'DONE';
 
+/** Guests only work in lists shared with them; users have a workspace of their own; admins also manage people. */
+export type Role = 'ADMIN' | 'USER' | 'GUEST';
+
 export interface Ctx {
   userId: string;
   email: string;
+  role: Role;
   isAdmin: boolean;
 }
 

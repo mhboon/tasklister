@@ -1,6 +1,6 @@
 import { PutCommand, UpdateCommand, TransactWriteCommand, DeleteCommand, QueryCommand } from '@aws-sdk/lib-dynamodb';
 import { ddb, tables, newId, nowIso, queryAll, batchGet, batchDelete, UserError } from '../../shared/db';
-import { requireAdmin, requireMember, requireOwner, getList, listItemRows, userNames, getMembership } from '../../shared/access';
+import { requireUser, requireMember, requireOwner, getList, listItemRows, userNames, getMembership } from '../../shared/access';
 import { compareText } from '../../shared/text';
 import { cleanName, normEmail } from '../../shared/validate';
 import { requireFolder } from './folders';
@@ -108,7 +108,7 @@ export async function listLists(ctx: Ctx) {
 }
 
 export async function createList(ctx: Ctx, args: { name: string; folderId?: string | null }) {
-  requireAdmin(ctx);
+  requireUser(ctx);
   const name = cleanName(args.name, 'List name');
   if (args.folderId) await requireFolder(ctx, args.folderId);
   const listId = newId();
@@ -135,7 +135,7 @@ function assertNotInbox(list: ListRow | undefined): ListRow {
 }
 
 export async function renameList(ctx: Ctx, args: { listId: string; name: string }) {
-  requireAdmin(ctx);
+  requireUser(ctx);
   await requireOwner(ctx, args.listId);
   assertNotInbox(await getList(args.listId));
   await ddb.send(
@@ -151,7 +151,7 @@ export async function renameList(ctx: Ctx, args: { listId: string; name: string 
 }
 
 export async function deleteList(ctx: Ctx, args: { listId: string }) {
-  requireAdmin(ctx);
+  requireUser(ctx);
   await requireOwner(ctx, args.listId);
   assertNotInbox(await getList(args.listId));
   const [items, members] = await Promise.all([
@@ -183,7 +183,7 @@ export async function deleteList(ctx: Ctx, args: { listId: string }) {
 
 /** Folders are personal: this only changes the caller's own placement. */
 export async function moveList(ctx: Ctx, args: { listId: string; folderId?: string | null }) {
-  requireAdmin(ctx);
+  requireUser(ctx);
   await requireMember(ctx, args.listId);
   if (args.folderId) await requireFolder(ctx, args.folderId);
   await ddb.send(
@@ -225,7 +225,7 @@ export async function listMembers(ctx: Ctx, args: { listId: string }) {
 }
 
 export async function shareList(ctx: Ctx, args: { listId: string; email: string }) {
-  requireAdmin(ctx);
+  requireUser(ctx);
   await requireOwner(ctx, args.listId);
   assertNotInbox(await getList(args.listId));
   const target = await findUserByEmail(normEmail(args.email));
@@ -249,7 +249,7 @@ export async function shareList(ctx: Ctx, args: { listId: string; email: string 
 }
 
 export async function unshareList(ctx: Ctx, args: { listId: string; userId: string }) {
-  requireAdmin(ctx);
+  requireUser(ctx);
   const mine = await requireMember(ctx, args.listId);
   const list = assertNotInbox(await getList(args.listId));
   if (args.userId === list.ownerId) throw new UserError("The owner can't be removed. Delete the list instead.");
