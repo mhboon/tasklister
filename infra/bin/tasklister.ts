@@ -14,23 +14,38 @@ const app = new cdk.App();
 const account = process.env.CDK_DEFAULT_ACCOUNT;
 const region = process.env.CDK_DEFAULT_REGION ?? 'eu-west-1';
 
-// The Route 53 zone for mboapps.click lives in this account; its ID is
-// account-specific so it comes from the environment (GitHub Actions
-// variable HOSTED_ZONE_ID in CI), never from source.
+// The Route 53 zone lives in this account. Its ID, its name and the site's
+// domain are environment-specific, so they come from the environment (GitHub
+// Actions variables HOSTED_ZONE_ID, HOSTED_ZONE_NAME and SITE_DOMAIN in CI),
+// never from source.
 const hostedZoneId = process.env.HOSTED_ZONE_ID ?? app.node.tryGetContext('hostedZoneId');
+const zoneName = process.env.HOSTED_ZONE_NAME ?? app.node.tryGetContext('hostedZoneName');
+const siteDomain = process.env.SITE_DOMAIN ?? app.node.tryGetContext('siteDomain');
 
 new TasklisterBackendStack(app, 'TasklisterBackendStack', { env: { account, region } });
 
 if (hostedZoneId) {
+  // A wrong domain would replace the CloudFront alias and certificate, so
+  // refuse to guess: all three values must be given together.
+  if (!zoneName || !siteDomain) {
+    throw new Error('HOSTED_ZONE_ID is set, so HOSTED_ZONE_NAME and SITE_DOMAIN must be set too.');
+  }
+  if (siteDomain !== zoneName && !siteDomain.endsWith(`.${zoneName}`)) {
+    throw new Error(`SITE_DOMAIN (${siteDomain}) must be inside HOSTED_ZONE_NAME (${zoneName}).`);
+  }
   const cert = new TasklisterCertStack(app, 'TasklisterCertStack', {
     env: { account, region: 'us-east-1' },
     crossRegionReferences: true,
     hostedZoneId,
+    zoneName,
+    siteDomain,
   });
   new TasklisterWebStack(app, 'TasklisterWebStack', {
     env: { account, region },
     crossRegionReferences: true,
     hostedZoneId,
+    zoneName,
+    siteDomain,
     certificate: cert.certificate,
   });
 }

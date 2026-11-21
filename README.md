@@ -1,7 +1,7 @@
 # Tasklister
 
 Lists, sharing, agenda, priorities and recurring items, at
-`https://lists.mboapps.click`. See [`SPEC.md`](SPEC.md) (what) and
+`https://<your-domain>`. See [`SPEC.md`](SPEC.md) (what) and
 [`ARCHITECTURE.md`](ARCHITECTURE.md) (how); working conventions are in
 [`CLAUDE.md`](CLAUDE.md).
 
@@ -27,11 +27,13 @@ Uses whatever AWS credentials are active (`aws login`). Region `eu-west-1`.
    cd infra
    npx cdk bootstrap aws://<account>/eu-west-1 aws://<account>/us-east-1
    ```
-2. **Find the Route 53 zone ID** of `mboapps.click`:
-   `aws route53 list-hosted-zones-by-name --dns-name mboapps.click`
+2. **Find the Route 53 zone ID** of your zone:
+   `aws route53 list-hosted-zones-by-name --dns-name <your-zone>`
 3. **Deploy the backend**, then build the web app with its outputs, then the rest:
    ```bash
    export HOSTED_ZONE_ID=<zone id>
+   export HOSTED_ZONE_NAME=<your-zone>        # e.g. example.com
+   export SITE_DOMAIN=<your-domain>           # inside the zone, e.g. lists.example.com
    npx cdk deploy TasklisterBackendStack --outputs-file cdk-outputs.json
    cp ../web/.env.example ../web/.env.local   # fill in ApiUrl / UserPoolId / UserPoolClientId
    (cd ../web && npm run build)
@@ -60,7 +62,7 @@ npx cdk deploy TasklisterGithubOidcStack -c githubRepo=<owner>/tasklister \
 ```
 Then in GitHub → Settings → Secrets and variables → Actions: secret
 `AWS_DEPLOY_ROLE_ARN` (the printed `DeployRoleArn`), variables `AWS_REGION`
-(`eu-west-1`) and `HOSTED_ZONE_ID`. Until set, the deploy workflow skips itself.
+(`eu-west-1`), `HOSTED_ZONE_ID`, `HOSTED_ZONE_NAME` and `SITE_DOMAIN`. Until set, the deploy workflow skips itself.
 Protect `main` (PR required) like popla.
 
 ## Local frontend dev

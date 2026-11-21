@@ -9,9 +9,6 @@ import * as route53 from 'aws-cdk-lib/aws-route53';
 import * as route53targets from 'aws-cdk-lib/aws-route53-targets';
 import * as acm from 'aws-cdk-lib/aws-certificatemanager';
 
-export const ZONE_NAME = 'mboapps.click';
-export const SITE_DOMAIN = `lists.${ZONE_NAME}`;
-
 /**
  * CloudFront only accepts certificates from us-east-1, so the certificate
  * lives in its own stack there and is handed to the web stack through
@@ -20,14 +17,14 @@ export const SITE_DOMAIN = `lists.${ZONE_NAME}`;
 export class TasklisterCertStack extends Stack {
   public readonly certificate: acm.ICertificate;
 
-  constructor(scope: Construct, id: string, props: StackProps & { hostedZoneId: string }) {
+  constructor(scope: Construct, id: string, props: StackProps & { hostedZoneId: string; zoneName: string; siteDomain: string }) {
     super(scope, id, props);
     const zone = route53.HostedZone.fromHostedZoneAttributes(this, 'Zone', {
       hostedZoneId: props.hostedZoneId,
-      zoneName: ZONE_NAME,
+      zoneName: props.zoneName,
     });
     this.certificate = new acm.Certificate(this, 'SiteCertificate', {
-      domainName: SITE_DOMAIN,
+      domainName: props.siteDomain,
       validation: acm.CertificateValidation.fromDns(zone),
     });
   }
@@ -37,7 +34,7 @@ export class TasklisterWebStack extends Stack {
   constructor(
     scope: Construct,
     id: string,
-    props: StackProps & { hostedZoneId: string; certificate: acm.ICertificate }
+    props: StackProps & { hostedZoneId: string; zoneName: string; siteDomain: string; certificate: acm.ICertificate }
   ) {
     super(scope, id, props);
 
@@ -83,7 +80,7 @@ export class TasklisterWebStack extends Stack {
 
     const distribution = new cloudfront.Distribution(this, 'Distribution', {
       defaultRootObject: 'index.html',
-      domainNames: [SITE_DOMAIN],
+      domainNames: [props.siteDomain],
       certificate: props.certificate,
       defaultBehavior: {
         origin: origins.S3BucketOrigin.withOriginAccessControl(siteBucket),
@@ -99,11 +96,11 @@ export class TasklisterWebStack extends Stack {
 
     const zone = route53.HostedZone.fromHostedZoneAttributes(this, 'Zone', {
       hostedZoneId: props.hostedZoneId,
-      zoneName: ZONE_NAME,
+      zoneName: props.zoneName,
     });
     const target = route53.RecordTarget.fromAlias(new route53targets.CloudFrontTarget(distribution));
-    new route53.ARecord(this, 'SiteA', { zone, recordName: SITE_DOMAIN, target });
-    new route53.AaaaRecord(this, 'SiteAAAA', { zone, recordName: SITE_DOMAIN, target });
+    new route53.ARecord(this, 'SiteA', { zone, recordName: props.siteDomain, target });
+    new route53.AaaaRecord(this, 'SiteAAAA', { zone, recordName: props.siteDomain, target });
 
     new s3deploy.BucketDeployment(this, 'DeploySite', {
       sources: [s3deploy.Source.asset(path.join(__dirname, '../../web/dist'))],
@@ -112,6 +109,6 @@ export class TasklisterWebStack extends Stack {
       distributionPaths: ['/*'],
     });
 
-    new CfnOutput(this, 'SiteUrl', { value: `https://${SITE_DOMAIN}` });
+    new CfnOutput(this, 'SiteUrl', { value: `https://${props.siteDomain}` });
   }
 }
