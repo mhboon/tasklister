@@ -1,6 +1,7 @@
 import { useRef, useState } from 'react';
 import { api, type Criticality, type Item } from '../lib/api';
 import { Icon } from './Icon';
+import { Linkified } from './Linkified';
 import { ConfirmDialog } from './ConfirmDialog';
 import { useAuth } from '../lib/useAuth';
 import { useAppData } from '../lib/AppData';
@@ -28,6 +29,7 @@ export function ItemDetail({ item, onChange, onError, onClose }: Props) {
   const [newSub, setNewSub] = useState('');
   const [title, setTitle] = useState(item.title);
   const [notes, setNotes] = useState(item.notes ?? '');
+  const [editingNotes, setEditingNotes] = useState(false);
   const dateRef = useRef<HTMLInputElement>(null);
   // Open subitems A–Z first, then the completed ones A–Z.
   const subitems = [...item.subitems].sort(
@@ -174,19 +176,62 @@ export function ItemDetail({ item, onChange, onError, onClose }: Props) {
           </ul>
         </div>
 
-        <label className="field">
+        <div className="field">
           <span>Notes</span>
-          <textarea
-            value={notes}
-            rows={3}
-            maxLength={5000}
-            onChange={(e) => setNotes(e.target.value)}
-            onBlur={() => {
-              const n = notes.trim();
-              if (n !== (item.notes ?? '')) run(() => api.updateItem(item.listId, item.itemId, { notes: n || null }), onChange);
-            }}
-          />
-        </label>
+          {editingNotes ? (
+            <>
+              <textarea
+                autoFocus
+                value={notes}
+                rows={5}
+                maxLength={5000}
+                aria-label="Notes"
+                onChange={(e) => setNotes(e.target.value)}
+              />
+              <div className="notes-actions">
+                <button
+                  type="button"
+                  className="icon-btn"
+                  aria-label="Save notes"
+                  title="Save notes"
+                  disabled={busy}
+                  onClick={() => {
+                    const n = notes.trim();
+                    if (n === (item.notes ?? '')) setEditingNotes(false);
+                    else run(() => api.updateItem(item.listId, item.itemId, { notes: n || null }), (u) => {
+                      onChange(u);
+                      setEditingNotes(false);
+                    });
+                  }}
+                >
+                  <Icon name="check" />
+                </button>
+                <button
+                  type="button"
+                  className="icon-btn"
+                  aria-label="Discard changes"
+                  title="Discard changes"
+                  disabled={busy}
+                  onClick={() => {
+                    setNotes(item.notes ?? '');
+                    setEditingNotes(false);
+                  }}
+                >
+                  <Icon name="close" />
+                </button>
+              </div>
+            </>
+          ) : (
+            <div className="notes-row">
+              <div className="notes-view">
+                {item.notes ? <Linkified text={item.notes} /> : <span className="muted">No notes</span>}
+              </div>
+              <button type="button" className="icon-btn" aria-label="Edit notes" title="Edit notes" onClick={() => setEditingNotes(true)}>
+                <Icon name="pencil" />
+              </button>
+            </div>
+          )}
+        </div>
 
         {canWork && (
           <button type="button" className="icon-btn delete-btn" aria-label="Delete item" title="Delete item" onClick={() => setConfirmDelete(true)}>

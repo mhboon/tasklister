@@ -9,7 +9,7 @@ export interface User { userId: string; email: string; displayName: string; role
 export interface Folder { folderId: string; name: string }
 export interface ListSummary {
   listId: string; name: string; ownerId: string; ownerName: string;
-  isOwner: boolean; isInbox: boolean; folderId: string | null; memberCount: number; openCount: number;
+  isOwner: boolean; isInbox: boolean; folderId: string | null; memberCount: number; mailName: string | null; openCount: number;
 }
 export interface Member { userId: string; email: string; displayName: string; isOwner: boolean }
 export interface Subitem { subitemId: string; title: string; status: Status }
@@ -31,7 +31,7 @@ export interface RecurringInput {
 }
 
 const USER = 'userId email displayName role isAdmin enabled';
-const LIST = 'listId name ownerId ownerName isOwner isInbox folderId memberCount openCount';
+const LIST = 'listId name ownerId ownerName isOwner isInbox folderId memberCount mailName openCount';
 const MEMBER = 'userId email displayName isOwner';
 const ITEM = `itemId listId listName title notes status dueDate criticality recurringId createdAt completedAt
   subitems { subitemId title status }`;
@@ -98,6 +98,13 @@ export const api = {
     ),
   deleteList: (listId: string) =>
     q<'deleteList', boolean>('deleteList', `mutation($listId:ID!){ deleteList(listId:$listId) }`, { listId }),
+  setListMailName: (listId: string, name: string | null) =>
+    q<'setListMailName', ListSummary>(
+      'setListMailName',
+      `mutation($listId:ID!,$name:String){ setListMailName(listId:$listId,name:$name){ ${LIST} } }`,
+      { listId, name }
+    ),
+  mailDomain: () => q<'mailDomain', string | null>('mailDomain', `query { mailDomain }`),
   moveList: (listId: string, folderId: string | null) =>
     q<'moveList', ListSummary>(
       'moveList',

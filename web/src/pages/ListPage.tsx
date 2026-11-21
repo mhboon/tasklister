@@ -1,6 +1,6 @@
 import { useState } from 'react';
 import { Navigate, useNavigate, useParams, useSearchParams } from 'react-router-dom';
-import { api, type Item, type Member } from '../lib/api';
+import { api, type ListSummary, type Item, type Member } from '../lib/api';
 import { useAppData } from '../lib/AppData';
 import { useAuth } from '../lib/useAuth';
 import { useLoad } from '../lib/useLoad';
@@ -14,7 +14,7 @@ import { compareText, loadSort, saveSort, sortItems, type SortKey } from '../lib
 
 export function ListPage() {
   const { listId = '' } = useParams();
-  const { me, lists, folders, refresh, loading: appLoading } = useAppData();
+  const { me, lists, folders, mailDomain, refresh, loading: appLoading } = useAppData();
   const navigate = useNavigate();
   // Which item / the settings screen is open lives in the URL, so Back closes it.
   const [params, setParams] = useSearchParams();
@@ -155,6 +155,7 @@ export function ListPage() {
               {folders.map((f) => <option key={f.folderId} value={f.folderId}>{f.name}</option>)}
             </select>
           </label>
+          {list.isOwner && mailDomain && <MailSettings list={list} domain={mailDomain} onChanged={refresh} />}
           <div className="head-actions">
             {list.isOwner && (
               <button type="button" className="tool-btn" onClick={() => setRenaming(true)}>
@@ -235,9 +236,12 @@ export function ListPage() {
 
 function SharePanel({ listId, onChanged }: { listId: string; onChanged: () => Promise<void> }) {
   const { data: members, setData, error, setError } = useLoad(() => api.listMembers(listId), listId);
-  const { data: users } = useLoad(() => api.listUsers(), listId);
+  const { data: users, reload: reloadUsers } = useLoad(() => api.listUsers(), listId);
   const [email, setEmail] = useState('');
   const [busy, setBusy] = useState(false);
+  const [guestName, setGuestName] = useState('');
+  const [guestEmail, setGuestEmail] = useState('');
+  const [issued, setIssued] = useState<{ email: string; password: string } | null>(null);
   const candidates = (users ?? [])
     .filter((u) => u.enabled && !(members ?? []).some((m) => m.userId === u.userId))
     .sort((a, b) => compareText(a.displayName, b.displayName));
@@ -250,6 +254,25 @@ function SharePanel({ listId, onChanged }: { listId: string; onChanged: () => Pr
       setEmail('');
       setError(null);
       await onChanged();
+    } catch (err) {
+      setError((err as Error).message);
+    } finally {
+      setBusy(false);
+    }
+  }
+
+  /** Someone new: create them as a guest, then share the list with them. */
+  async function inviteGuest(e: React.FormEvent) {
+    e.preventDefault();
+    setBusy(true);
+    try {
+      const created = await api.createUser(guestEmail, guestName, 'GUEST');
+      setData(await api.shareList(listId, created.user.email));
+      setIssued({ email: created.user.email, password: created.temporaryPassword });
+      setGuestName('');
+      setGuestEmail('');
+      setError(null);
+      await Promise.all([onChanged(), reloadUsers()]);
     } catch (err) {
       setError((err as Error).message);
     } finally {
@@ -285,8 +308,66 @@ function SharePanel({ listId, onChanged }: { listId: string; onChanged: () => Pr
         </select>
         <button type="submit" className="icon-submit" aria-label="Share" title="Share" disabled={busy || !email}><Icon name="people" /></button>
       </form>
+      <form className="inline-form" onSubmit={inviteGuest}>
+        <input value={guestName} onChange={(e) => setGuestName(e.target.value)} placeholder="New person: name" aria-label="New person's name" required maxLength={100} />
+        <input type="email" value={guestEmail} onChange={(e) => setGuestEmail(e.target.value)} placeholder="Email" aria-label="New person's email" required />
+        <button type="submit" className="icon-submit" aria-label="Add as guest and share" title="Add as guest and share" disabled={busy}><Icon name="plus" /></button>
+      </form>
+      {issued && (
+        <div className="card notice" role="status">
+          <p>Temporary password for <strong>{issued.email}</strong>. It is shown only once; they choose their own at first sign-in. If they lose it, an admin can reset it.</p>
+          <p><code className="password">{issued.password}</code></p>
+          <button type="button" aria-label="Done" title="Done" className="icon-btn" onClick={() => setIssued(null)}><Icon name="check" /></button>
+        </div>
+      )}
       <p className="muted small">Everyone on the list can add, complete and remove items. Only you can rename, share or delete it.</p>
       {error && <p className="error">{error}</p>}
+    </div>
+  );
+}
+
+/** The list's email address: off by default, switched on by its owner with a unique name. */
+function MailSettings({ list, domain, onChanged }: { list: ListSummary; domain: string; onChanged: () => Promise<void> }) {
+  const [name, setName] = useState('');
+  const [busy, setBusy] = useState(false);
+  const [error, setError] = useState<string | null>(null);
+
+  async function set(next: string | null) {
+    setBusy(true);
+    try {
+      await api.setListMailName(list.listId, next);
+      setName('');
+      setError(null);
+      await onChanged();
+    } catch (err) {
+      setError((err as Error).message);
+    } finally {
+      setBusy(false);
+    }
+  }
+
+  return (
+    <div className="field">
+      <span>Email address</span>
+      {list.mailName ? (
+        <div className="due-row">
+          <Icon name="mail" size={18} />
+          <code className="mail-address">{list.mailName}@{domain}</code>
+          <button type="button" className="icon-btn" aria-label="Turn off email for this list" title="Turn off email for this list" disabled={busy} onClick={() => set(null)}>
+            <Icon name="close" />
+          </button>
+        </div>
+      ) : (
+        <form className="inline-form" onSubmit={(e) => { e.preventDefault(); void set(name); }}>
+          <input value={name} onChange={(e) => setName(e.target.value)} placeholder="name" aria-label="Address name" maxLength={32} required />
+          <span className="mail-domain">@{domain}</span>
+          <button type="submit" className="icon-submit" aria-label="Turn on email for this list" title="Turn on email for this list" disabled={busy || !name.trim()}>
+            <Icon name="check" />
+          </button>
+        </form>
+      )}
+      <small className="muted">Mail from members of this list to this address is added as an item.</small>
+      {error && <small className="error">{error}</small>}
     </div>
   );
 }

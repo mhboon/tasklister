@@ -27,6 +27,7 @@ export const tables = {
   get members() { return env('MEMBERS_TABLE'); },
   get items() { return env('ITEMS_TABLE'); },
   get recurring() { return env('RECURRING_TABLE'); },
+  get mailboxes() { return env('MAILBOXES_TABLE'); },
 };
 
 export const TIME_ZONE = process.env.TZ_NAME ?? 'Europe/Amsterdam';

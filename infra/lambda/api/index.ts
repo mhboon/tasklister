@@ -31,6 +31,7 @@ const handlers: Record<string, Handler> = {
   renameList: lists.renameList,
   deleteList: lists.deleteList,
   moveList: lists.moveList,
+  setListMailName: lists.setListMailName,
   shareList: lists.shareList,
   unshareList: lists.unshareList,
 
@@ -47,6 +48,7 @@ const handlers: Record<string, Handler> = {
   deleteSubitem: items.deleteSubitem,
 
   linkPreview: preview.linkPreview,
+  mailDomain: async () => process.env.MAIL_DOMAIN ?? null,
 
   listRecurring: recurring.listRecurring,
   createRecurring: recurring.createRecurring,

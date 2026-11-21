@@ -2,6 +2,7 @@
 import 'source-map-support/register';
 import * as cdk from 'aws-cdk-lib';
 import { TasklisterBackendStack } from '../lib/backend-stack';
+import { TasklisterMailStack } from '../lib/mail-stack';
 import { TasklisterCertStack, TasklisterWebStack } from '../lib/web-stack';
 import { GithubOidcStack } from '../lib/github-oidc-stack';
 
@@ -22,7 +23,10 @@ const hostedZoneId = process.env.HOSTED_ZONE_ID ?? app.node.tryGetContext('hoste
 const zoneName = process.env.HOSTED_ZONE_NAME ?? app.node.tryGetContext('hostedZoneName');
 const siteDomain = process.env.SITE_DOMAIN ?? app.node.tryGetContext('siteDomain');
 
-new TasklisterBackendStack(app, 'TasklisterBackendStack', { env: { account, region } });
+const backend = new TasklisterBackendStack(app, 'TasklisterBackendStack', {
+  env: { account, region },
+  mailDomain: hostedZoneId ? siteDomain : undefined,
+});
 
 if (hostedZoneId) {
   // A wrong domain would replace the CloudFront alias and certificate, so
@@ -40,6 +44,7 @@ if (hostedZoneId) {
     zoneName,
     siteDomain,
   });
+  new TasklisterMailStack(app, 'TasklisterMailStack', { env: { account, region }, backend, hostedZoneId, zoneName, mailDomain: siteDomain });
   new TasklisterWebStack(app, 'TasklisterWebStack', {
     env: { account, region },
     crossRegionReferences: true,

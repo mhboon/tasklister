@@ -3,6 +3,7 @@ import { useNavigate, useSearchParams } from 'react-router-dom';
 import { Icon } from '../components/Icon';
 import { api, type Criticality } from '../lib/api';
 import { useAppData } from '../lib/AppData';
+import { composeSharedItem } from '../lib/shareFormat';
 import { loadShareTarget, saveShareTarget } from '../lib/sort';
 
 /** Landing page for Android's "Share" menu (see share_target in manifest.json). */
@@ -36,10 +37,12 @@ export function SharePage() {
     api.linkPreview(url)
       .then((p) => {
         if (cancelled) return;
-        if (p.title && !edited.current.title) setTitle(p.title.slice(0, 200));
+        const item = composeSharedItem(url, p);
+        if (!item) return;
+        if (!edited.current.title) setTitle(item.title);
         if (!edited.current.notes) {
-          const extra = [p.siteName, p.description].filter(Boolean).join(' – ');
-          if (extra) setNotes((cur) => [extra, cur].filter(Boolean).join('\n'));
+          // The shared text stays; the link itself is already in the title.
+          setNotes((cur) => [item.notes, cur.split('\n').filter((l) => l.trim() !== url).join('\n').trim()].filter(Boolean).join('\n\n'));
         }
       })
       .catch(() => {}) // a failed lookup just leaves the form as shared

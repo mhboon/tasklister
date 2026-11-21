@@ -107,3 +107,13 @@ jobs:
           set -e
           body=$(curl -fsS --retry 5 --retry-delay 5 --retry-all-errors "https://${SITE_DOMAIN}/")
           echo "$body" | grep -q '<div id="root">' || { echo "::error::site did not return the app shell"; exit 1; }
+
+      # After the smoke test, so a problem with mail can't hide a broken site.
+      - name: Deploy mail stack
+        if: steps.check.outputs.configured == 'true'
+        working-directory: infra
+        env:
+          HOSTED_ZONE_ID: ${{ vars.HOSTED_ZONE_ID }}
+          HOSTED_ZONE_NAME: ${{ vars.HOSTED_ZONE_NAME }}
+          SITE_DOMAIN: ${{ vars.SITE_DOMAIN }}
+        run: npx cdk deploy TasklisterMailStack --require-approval never
