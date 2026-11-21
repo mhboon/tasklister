@@ -15,7 +15,16 @@ type Prompt =
 
 export function Layout() {
   const { user, logout } = useAuth();
-  const { lists, folders, refresh, error } = useAppData();
+  const { lists, folders, refresh, refreshAll, error } = useAppData();
+  const [refreshing, setRefreshing] = useState(false);
+  const doRefresh = async () => {
+    setRefreshing(true);
+    try {
+      await refreshAll();
+    } finally {
+      setRefreshing(false);
+    }
+  };
   const navigate = useNavigate();
   const canWork = !!user?.canWork;
   const [menuOpen, setMenuOpen] = useState(false);
@@ -75,6 +84,10 @@ export function Layout() {
           ☰
         </button>
         <span className="brand">Tasklister</span>
+        <span className="spacer" />
+        <button type="button" className="icon-btn" aria-label="Refresh" title="Refresh lists and items" disabled={refreshing} onClick={doRefresh}>
+          <Icon name="refresh" size={20} />
+        </button>
       </header>
 
       {menuOpen && <div className="scrim" onClick={close} />}
@@ -91,6 +104,9 @@ export function Layout() {
         <div className="nav-section">
           <h2>Lists</h2>
           <span className="spacer" />
+          <button type="button" className="icon-btn desktop-only" aria-label="Refresh" title="Refresh lists and items" disabled={refreshing} onClick={doRefresh}>
+          <Icon name="refresh" size={20} />
+        </button>
           {canWork && (
             <>
               <button type="button" className="icon-btn" aria-label="New folder" title="New folder" onClick={() => setPrompt({ kind: 'folder' })}>
