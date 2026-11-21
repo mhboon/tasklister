@@ -7,6 +7,8 @@ import { useLoad } from '../lib/useLoad';
 import { ItemRow } from '../components/ItemRow';
 import { ConfirmDialog } from '../components/ConfirmDialog';
 import { PromptDialog } from '../components/PromptDialog';
+import { SortSelect } from '../components/SortSelect';
+import { compareText, loadSort, saveSort, sortItems, type SortKey } from '../lib/sort';
 
 export function ListPage() {
   const { listId = '' } = useParams();
@@ -23,6 +25,15 @@ export function ListPage() {
   const [renaming, setRenaming] = useState(false);
   const [confirm, setConfirm] = useState<'delete' | 'leave' | null>(null);
   const [sharing, setSharing] = useState(false);
+  const [settingsOpen, setSettingsOpen] = useState(false);
+  const [sortOverride, setSortOverride] = useState<{ listId: string; key: SortKey } | null>(null);
+
+  const sort: SortKey =
+    sortOverride?.listId === listId ? sortOverride.key : loadSort(me?.userId ?? '', listId, !!list?.isInbox);
+  function changeSort(key: SortKey) {
+    setSortOverride({ listId, key });
+    if (me) saveSort(me.userId, listId, key);
+  }
 
   if (appLoading) return <p className="muted pad">Loading…</p>;
   if (!list) return <Navigate to="/" replace />;
@@ -49,14 +60,48 @@ export function ListPage() {
     }
   }
 
-  const open = (items ?? []).filter((i) => i.status === 'OPEN');
-  const done = (items ?? []).filter((i) => i.status === 'DONE');
+  const open = sortItems((items ?? []).filter((i) => i.status === 'OPEN'), sort);
+  const done = sortItems((items ?? []).filter((i) => i.status === 'DONE'), sort);
 
   return (
     <section className="page">
       <div className="page-head">
         <h1>{list.name}</h1>
         {!list.isInbox && isAdmin && (
+          <button
+            type="button"
+            className="icon-btn settings-btn"
+            aria-label="List settings"
+            title="List settings"
+            aria-expanded={settingsOpen}
+            onClick={() => setSettingsOpen(!settingsOpen)}
+          >
+            ⚙
+          </button>
+        )}
+      </div>
+      {!list.isOwner && <p className="muted small">Shared by {list.ownerName}</p>}
+
+      {settingsOpen && !list.isInbox && isAdmin && (
+        <div className="card settings-panel">
+          <h2>List settings</h2>
+          <label className="field">
+            <span>Folder</span>
+            <select
+              value={list.folderId ?? ''}
+              onChange={async (e) => {
+                try {
+                  await api.moveList(listId, e.target.value || null);
+                  await refresh();
+                } catch (err) {
+                  setError((err as Error).message);
+                }
+              }}
+            >
+              <option value="">(top level)</option>
+              {folders.map((f) => <option key={f.folderId} value={f.folderId}>{f.name}</option>)}
+            </select>
+          </label>
           <div className="head-actions">
             {list.isOwner && <button type="button" onClick={() => setRenaming(true)}>Rename</button>}
             {list.isOwner && <button type="button" onClick={() => setSharing(!sharing)} aria-expanded={sharing}>Share{list.memberCount > 1 ? ` (${list.memberCount})` : ''}</button>}
@@ -66,28 +111,7 @@ export function ListPage() {
               <button type="button" className="danger" onClick={() => setConfirm('leave')}>Leave</button>
             )}
           </div>
-        )}
-      </div>
-      {!list.isOwner && <p className="muted small">Shared by {list.ownerName}</p>}
-
-      {!list.isInbox && isAdmin && (
-        <label className="field inline">
-          <span>Folder</span>
-          <select
-            value={list.folderId ?? ''}
-            onChange={async (e) => {
-              try {
-                await api.moveList(listId, e.target.value || null);
-                await refresh();
-              } catch (err) {
-                setError((err as Error).message);
-              }
-            }}
-          >
-            <option value="">(top level)</option>
-            {folders.map((f) => <option key={f.folderId} value={f.folderId}>{f.name}</option>)}
-          </select>
-        </label>
+        </div>
       )}
 
       {sharing && list.isOwner && <SharePanel listId={listId} onChanged={refresh} />}
@@ -103,6 +127,8 @@ export function ListPage() {
         </select>
         <button type="submit" className="primary" disabled={adding || !title.trim()}>Add</button>
       </form>
+
+      <SortSelect value={sort} onChange={changeSort} />
 
       {error && <p className="error">{error}</p>}
       {loading && <p className="muted">Loading…</p>}
@@ -166,8 +192,12 @@ export function ListPage() {
 
 function SharePanel({ listId, onChanged }: { listId: string; onChanged: () => Promise<void> }) {
   const { data: members, setData, error, setError } = useLoad(() => api.listMembers(listId), listId);
+  const { data: users } = useLoad(() => api.listUsers(), listId);
   const [email, setEmail] = useState('');
   const [busy, setBusy] = useState(false);
+  const candidates = (users ?? [])
+    .filter((u) => u.enabled && !(members ?? []).some((m) => m.userId === u.userId))
+    .sort((a, b) => compareText(a.displayName, b.displayName));
 
   async function invite(e: React.FormEvent) {
     e.preventDefault();
@@ -206,7 +236,10 @@ function SharePanel({ listId, onChanged }: { listId: string; onChanged: () => Pr
         ))}
       </ul>
       <form className="inline-form" onSubmit={invite}>
-        <input type="email" placeholder="Email of an existing user" value={email} onChange={(e) => setEmail(e.target.value)} required />
+        <select value={email} onChange={(e) => setEmail(e.target.value)} required aria-label="User to share with">
+          <option value="">Choose a user…</option>
+          {candidates.map((u) => <option key={u.userId} value={u.email}>{u.displayName} ({u.email})</option>)}
+        </select>
         <button type="submit" disabled={busy || !email}>Share</button>
       </form>
       <p className="muted small">Everyone on the list can add, complete and remove items. Only you can rename, share or delete it.</p>

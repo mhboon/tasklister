@@ -8,6 +8,7 @@ import { AgendaPage } from './pages/AgendaPage';
 import { PriorityPage } from './pages/PriorityPage';
 import { RecurringPage } from './pages/RecurringPage';
 import { UsersPage } from './pages/UsersPage';
+import { SharePage } from './pages/SharePage';
 import { AccountPage } from './pages/AccountPage';
 
 function Home() {
@@ -41,6 +42,7 @@ export default function App() {
         <Route path="priority" element={<PriorityPage />} />
         <Route path="recurring" element={<ProtectedRoute requireAdmin><RecurringPage /></ProtectedRoute>} />
         <Route path="users" element={<ProtectedRoute requireAdmin><UsersPage /></ProtectedRoute>} />
+        <Route path="share" element={<SharePage />} />
         <Route path="account" element={<AccountPage />} />
       </Route>
       <Route path="*" element={<Navigate to="/" replace />} />

@@ -1,14 +1,15 @@
 import { PutCommand, UpdateCommand, TransactWriteCommand, DeleteCommand, QueryCommand } from '@aws-sdk/lib-dynamodb';
 import { ddb, tables, newId, nowIso, queryAll, batchGet, batchDelete, UserError } from '../../shared/db';
 import { requireAdmin, requireMember, requireOwner, getList, listItemRows, userNames, getMembership } from '../../shared/access';
+import { compareText } from '../../shared/text';
 import { cleanName, normEmail } from '../../shared/validate';
 import { requireFolder } from './folders';
 import { findUserByEmail } from './users';
 import type { Ctx, ListRow, MemberRow } from '../../shared/types';
 
-interface SummaryInput { list: ListRow; membership: MemberRow; memberCount: number; ownerName: string }
+interface SummaryInput { list: ListRow; membership: MemberRow; memberCount: number; openCount: number; ownerName: string }
 
-function summary({ list, membership, memberCount, ownerName }: SummaryInput, ctx: Ctx) {
+function summary({ list, membership, memberCount, openCount, ownerName }: SummaryInput, ctx: Ctx) {
   return {
     listId: list.listId,
     name: list.name,
@@ -18,6 +19,7 @@ function summary({ list, membership, memberCount, ownerName }: SummaryInput, ctx
     isInbox: !!list.isInbox,
     folderId: membership.folderId ?? null,
     memberCount,
+    openCount,
   };
 }
 
@@ -34,19 +36,45 @@ async function countMembers(listId: string): Promise<number> {
   return r.Count ?? 0;
 }
 
+/** Open top-level items (subitems have a parentId and are not counted). */
+async function countOpenItems(listId: string): Promise<number> {
+  let total = 0;
+  let key: Record<string, unknown> | undefined;
+  do {
+    const r = await ddb.send(
+      new QueryCommand({
+        TableName: tables.items,
+        KeyConditionExpression: 'listId = :l',
+        FilterExpression: '#s = :open AND attribute_not_exists(parentId)',
+        ExpressionAttributeNames: { '#s': 'status' },
+        ExpressionAttributeValues: { ':l': listId, ':open': 'OPEN' },
+        Select: 'COUNT',
+        ExclusiveStartKey: key,
+      })
+    );
+    total += r.Count ?? 0;
+    key = r.LastEvaluatedKey;
+  } while (key);
+  return total;
+}
+
 async function summaryFor(ctx: Ctx, listId: string) {
   const membership = await requireMember(ctx, listId);
   const list = await getList(listId);
   if (!list) throw new UserError('List not found.');
-  const [memberCount, names] = await Promise.all([countMembers(listId), userNames([list.ownerId])]);
-  return summary({ list, membership, memberCount, ownerName: names.get(list.ownerId)?.displayName ?? '' }, ctx);
+  const [memberCount, openCount, names] = await Promise.all([
+    countMembers(listId),
+    countOpenItems(listId),
+    userNames([list.ownerId]),
+  ]);
+  return summary({ list, membership, memberCount, openCount, ownerName: names.get(list.ownerId)?.displayName ?? '' }, ctx);
 }
 
 /** Inbox first, then everything else alphabetically (case-insensitive). */
 export function sortLists<T extends { name: string; isInbox: boolean }>(lists: T[]): T[] {
   return [...lists].sort((a, b) => {
     if (a.isInbox !== b.isInbox) return a.isInbox ? -1 : 1;
-    return a.name.localeCompare(b.name, undefined, { sensitivity: 'base' });
+    return compareText(a.name, b.name);
   });
 }
 
@@ -67,13 +95,14 @@ export async function accessibleLists(ctx: Ctx): Promise<{ list: ListRow; member
 
 export async function listLists(ctx: Ctx) {
   const rows = await accessibleLists(ctx);
-  const [counts, names] = await Promise.all([
+  const [counts, opens, names] = await Promise.all([
     Promise.all(rows.map((r) => countMembers(r.list.listId))),
+    Promise.all(rows.map((r) => countOpenItems(r.list.listId))),
     userNames(rows.map((r) => r.list.ownerId)),
   ]);
   return sortLists(
     rows.map((r, i) =>
-      summary({ ...r, memberCount: counts[i], ownerName: names.get(r.list.ownerId)?.displayName ?? '' }, ctx)
+      summary({ ...r, memberCount: counts[i], openCount: opens[i], ownerName: names.get(r.list.ownerId)?.displayName ?? '' }, ctx)
     )
   );
 }
@@ -187,7 +216,7 @@ async function membersOf(ctx: Ctx, listId: string) {
       displayName: names.get(r.userId)?.displayName ?? '',
       isOwner: r.userId === list?.ownerId,
     }))
-    .sort((a, b) => Number(b.isOwner) - Number(a.isOwner) || a.displayName.localeCompare(b.displayName));
+    .sort((a, b) => Number(b.isOwner) - Number(a.isOwner) || compareText(a.displayName, b.displayName));
 }
 
 export async function listMembers(ctx: Ctx, args: { listId: string }) {

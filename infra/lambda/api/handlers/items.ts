@@ -1,8 +1,9 @@
 import { PutCommand, UpdateCommand } from '@aws-sdk/lib-dynamodb';
 import { ddb, tables, newId, nowIso, batchDelete, UserError } from '../../shared/db';
 import { requireAdmin, requireMember, listItemRows } from '../../shared/access';
+import { compareText } from '../../shared/text';
 import { assembleItems, getItemDto, getItemRow, putItem } from '../../shared/items';
-import { cleanName, cleanDate, cleanCriticality } from '../../shared/validate';
+import { cleanName, cleanDate, cleanCriticality, cleanNotes } from '../../shared/validate';
 import { accessibleLists } from './lists';
 import type { Ctx, Status, ItemRow } from '../../shared/types';
 
@@ -35,9 +36,9 @@ async function openItemsAcross(ctx: Ctx, keep: (i: ReturnType<typeof assembleIte
 
 export async function listAgenda(ctx: Ctx) {
   const items = await openItemsAcross(ctx, (i) => !!i.dueDate);
-  // Oldest first. Whether an item is overdue depends on the viewer's
+  // Oldest day first, alphabetical within a day. Whether an item is overdue depends on the viewer's
   // timezone "today", so the client decides that.
-  return items.sort((a, b) => a.dueDate!.localeCompare(b.dueDate!) || a.createdAt.localeCompare(b.createdAt));
+  return items.sort((a, b) => a.dueDate!.localeCompare(b.dueDate!) || compareText(a.title, b.title));
 }
 
 export async function listPriority(ctx: Ctx) {
@@ -47,12 +48,13 @@ export async function listPriority(ctx: Ctx) {
 
 export async function createItem(
   ctx: Ctx,
-  args: { listId: string; title: string; dueDate?: string | null; criticality?: string | null }
+  args: { listId: string; title: string; notes?: string | null; dueDate?: string | null; criticality?: string | null }
 ) {
   await requireMember(ctx, args.listId);
   const row = await putItem({
     listId: args.listId,
     title: cleanName(args.title, 'Title', TITLE_MAX),
+    notes: cleanNotes(args.notes),
     dueDate: args.dueDate ? cleanDate(args.dueDate) : undefined,
     criticality: args.criticality ? cleanCriticality(args.criticality) : undefined,
   });
@@ -61,7 +63,7 @@ export async function createItem(
 
 export async function updateItem(
   ctx: Ctx,
-  args: { listId: string; itemId: string; patch: { title?: string | null; dueDate?: string | null; criticality?: string | null } }
+  args: { listId: string; itemId: string; patch: { title?: string | null; notes?: string | null; dueDate?: string | null; criticality?: string | null } }
 ) {
   await requireMember(ctx, args.listId);
   await requireItem(args.listId, args.itemId);
@@ -75,6 +77,11 @@ export async function updateItem(
     sets.push('#title = :title');
     names['#title'] = 'title';
     values[':title'] = cleanName(patch.title, 'Title', TITLE_MAX);
+  }
+  if ('notes' in patch) {
+    const notes = cleanNotes(patch.notes);
+    if (notes === undefined) removes.push('notes');
+    else { sets.push('notes = :notes'); values[':notes'] = notes; }
   }
   // `key in patch` distinguishes "not sent" from an explicit null (= clear).
   if ('dueDate' in patch) {

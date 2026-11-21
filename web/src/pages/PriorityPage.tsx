@@ -1,5 +1,6 @@
 import { api, type Criticality, type Item } from '../lib/api';
 import { useLoad } from '../lib/useLoad';
+import { compareText } from '../lib/sort';
 import { ItemRow } from '../components/ItemRow';
 
 const GROUPS: { key: Criticality; label: string }[] = [
@@ -29,7 +30,7 @@ export function PriorityPage() {
       {GROUPS.map(({ key, label }) => {
         const items = (data ?? [])
           .filter((i) => i.criticality === key)
-          .sort((a, b) => (a.dueDate ?? '9999').localeCompare(b.dueDate ?? '9999') || a.createdAt.localeCompare(b.createdAt));
+          .sort((a, b) => compareText(a.title, b.title));
         if (items.length === 0) return null;
         return (
           <div key={key} className="group">

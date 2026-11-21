@@ -17,6 +17,7 @@ export interface ItemRow {
   itemId: string;
   parentId?: string;
   title: string;
+  notes?: string;
   status: Status;
   dueDate?: string;
   criticality?: Criticality;

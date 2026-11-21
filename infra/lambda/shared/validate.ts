@@ -20,3 +20,14 @@ export function cleanCriticality(value: unknown): Criticality {
 }
 
 export const normEmail = (e: string) => e.trim().toLowerCase();
+
+export const NOTES_MAX = 5000;
+
+/** Notes are optional free text; blank means "no notes". */
+export function cleanNotes(value: unknown): string | undefined {
+  if (value == null) return undefined;
+  if (typeof value !== 'string') throw new UserError('Invalid notes.');
+  const s = value.trim();
+  if (s.length > NOTES_MAX) throw new UserError(`Notes can be at most ${NOTES_MAX} characters.`);
+  return s || undefined;
+}

@@ -8,12 +8,12 @@ export interface User { userId: string; email: string; displayName: string; isAd
 export interface Folder { folderId: string; name: string }
 export interface ListSummary {
   listId: string; name: string; ownerId: string; ownerName: string;
-  isOwner: boolean; isInbox: boolean; folderId: string | null; memberCount: number;
+  isOwner: boolean; isInbox: boolean; folderId: string | null; memberCount: number; openCount: number;
 }
 export interface Member { userId: string; email: string; displayName: string; isOwner: boolean }
 export interface Subitem { subitemId: string; title: string; status: Status }
 export interface Item {
-  itemId: string; listId: string; listName: string | null; title: string; status: Status;
+  itemId: string; listId: string; listName: string | null; title: string; notes: string | null; status: Status;
   dueDate: string | null; criticality: Criticality | null; recurringId: string | null;
   subitems: Subitem[]; createdAt: string; completedAt: string | null;
 }
@@ -29,9 +29,9 @@ export interface RecurringInput {
 }
 
 const USER = 'userId email displayName isAdmin enabled';
-const LIST = 'listId name ownerId ownerName isOwner isInbox folderId memberCount';
+const LIST = 'listId name ownerId ownerName isOwner isInbox folderId memberCount openCount';
 const MEMBER = 'userId email displayName isOwner';
-const ITEM = `itemId listId listName title status dueDate criticality recurringId createdAt completedAt
+const ITEM = `itemId listId listName title notes status dueDate criticality recurringId createdAt completedAt
   subitems { subitemId title status }`;
 const RECURRING = `recurringId title targetListId targetListName frequency interval weekday dayOfMonth
   startDate nextDue criticality active`;
@@ -121,16 +121,22 @@ export const api = {
     q<'listItems', Item[]>('listItems', `query($listId:ID!){ listItems(listId:$listId){ ${ITEM} } }`, { listId }),
   listAgenda: () => q<'listAgenda', Item[]>('listAgenda', `query { listAgenda { ${ITEM} } }`),
   listPriority: () => q<'listPriority', Item[]>('listPriority', `query { listPriority { ${ITEM} } }`),
-  createItem: (listId: string, title: string, dueDate?: string | null, criticality?: Criticality | null) =>
+  createItem: (
+    listId: string,
+    title: string,
+    dueDate?: string | null,
+    criticality?: Criticality | null,
+    notes?: string | null
+  ) =>
     q<'createItem', Item>(
       'createItem',
-      `mutation($listId:ID!,$title:String!,$dueDate:String,$criticality:Criticality){ createItem(listId:$listId,title:$title,dueDate:$dueDate,criticality:$criticality){ ${ITEM} } }`,
-      { listId, title, dueDate, criticality }
+      `mutation($listId:ID!,$title:String!,$notes:String,$dueDate:String,$criticality:Criticality){ createItem(listId:$listId,title:$title,notes:$notes,dueDate:$dueDate,criticality:$criticality){ ${ITEM} } }`,
+      { listId, title, notes, dueDate, criticality }
     ),
   updateItem: (
     listId: string,
     itemId: string,
-    patch: { title?: string; dueDate?: string | null; criticality?: Criticality | null }
+    patch: { title?: string; notes?: string | null; dueDate?: string | null; criticality?: Criticality | null }
   ) =>
     q<'updateItem', Item>(
       'updateItem',
