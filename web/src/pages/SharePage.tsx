@@ -1,4 +1,4 @@
-import { useState } from 'react';
+import { useEffect, useRef, useState } from 'react';
 import { useNavigate, useSearchParams } from 'react-router-dom';
 import { Icon } from '../components/Icon';
 import { api, type Criticality } from '../lib/api';
@@ -26,6 +26,28 @@ export function SharePage() {
 
   const [title, setTitle] = useState(initialTitle);
   const [notes, setNotes] = useState(initialNotes);
+  const [looking, setLooking] = useState(!!url);
+  // Anything the user typed is theirs: the lookup only fills what is still as shared.
+  const edited = useRef({ title: false, notes: false });
+
+  useEffect(() => {
+    if (!url) return;
+    let cancelled = false;
+    api.linkPreview(url)
+      .then((p) => {
+        if (cancelled) return;
+        if (p.title && !edited.current.title) setTitle(p.title.slice(0, 200));
+        if (!edited.current.notes) {
+          const extra = [p.siteName, p.description].filter(Boolean).join(' – ');
+          if (extra) setNotes((cur) => [extra, cur].filter(Boolean).join('\n'));
+        }
+      })
+      .catch(() => {}) // a failed lookup just leaves the form as shared
+      .finally(() => !cancelled && setLooking(false));
+    return () => {
+      cancelled = true;
+    };
+  }, [url]);
   const [due, setDue] = useState('');
   const [crit, setCrit] = useState<Criticality | ''>('');
   const [picked, setPicked] = useState<string | null>(null);
@@ -57,8 +79,8 @@ export function SharePage() {
     <section className="page narrow">
       <h1>Add to Tasklister</h1>
       <form className="card" onSubmit={save}>
-        <label className="field"><span>Title</span><input value={title} maxLength={200} required onChange={(e) => setTitle(e.target.value)} /></label>
-        <label className="field"><span>Notes</span><textarea rows={4} maxLength={5000} value={notes} onChange={(e) => setNotes(e.target.value)} /></label>
+        <label className="field"><span>Title</span><input value={title} maxLength={200} required onChange={(e) => { edited.current.title = true; setTitle(e.target.value); }} />{looking && <small className="muted">Looking up the link…</small>}</label>
+        <label className="field"><span>Notes</span><textarea rows={4} maxLength={5000} value={notes} onChange={(e) => { edited.current.notes = true; setNotes(e.target.value); }} /></label>
         <label className="field"><span>Due date</span><input type="date" value={due} onChange={(e) => setDue(e.target.value)} /></label>
         <label className="field">
           <span>Priority</span>

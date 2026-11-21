@@ -86,6 +86,13 @@ type Item {
   completedAt: String
 }
 
+type LinkPreview {
+  url: String!
+  title: String
+  description: String
+  siteName: String
+}
+
 type Recurring {
   recurringId: ID!
   title: String!
@@ -140,6 +147,8 @@ type Query {
   "Open items with a criticality, across every list the caller can see."
   listPriority: [Item!]!
   listRecurring: [Recurring!]!
+  "Title and description of a link, read from the page. Fields are null when the page can't be read."
+  linkPreview(url: String!): LinkPreview!
 }
 
 type Mutation {
