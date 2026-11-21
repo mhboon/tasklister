@@ -1,0 +1,103 @@
+# Deploys on every push to main. AWS auth is GitHub OIDC (see
+# infra/lib/github-oidc-stack.ts): no long-lived keys. The deploy role ARN
+# is only ever a secret, so GitHub masks the account ID it contains in logs.
+# Do not echo secrets.
+name: Deploy
+
+on:
+  push:
+    branches: [main]
+  workflow_dispatch: {}
+
+permissions:
+  id-token: write
+  contents: read
+
+concurrency:
+  group: deploy
+  cancel-in-progress: false
+
+jobs:
+  deploy:
+    runs-on: ubuntu-latest
+    steps:
+      # Until the one-time setup in README.md is done, deploy is skipped
+      # rather than failing.
+      - name: Check AWS deploy configuration
+        id: check
+        run: |
+          if [ -n "${{ secrets.AWS_DEPLOY_ROLE_ARN }}" ] && [ -n "${{ vars.AWS_REGION }}" ] && [ -n "${{ vars.HOSTED_ZONE_ID }}" ]; then
+            echo "configured=true" >> "$GITHUB_OUTPUT"
+          else
+            echo "configured=false" >> "$GITHUB_OUTPUT"
+            MSG="AWS_DEPLOY_ROLE_ARN secret and/or AWS_REGION / HOSTED_ZONE_ID variables are not set — skipping deploy. See README.md."
+            echo "::notice::$MSG"
+            echo "$MSG" >> "$GITHUB_STEP_SUMMARY"
+          fi
+
+      - uses: actions/checkout@3d3c42e5aac5ba805825da76410c181273ba90b1 # v7
+        if: steps.check.outputs.configured == 'true'
+
+      - uses: actions/setup-node@949feb2413d6458794dcd2491c4babbbce0c15c1 # v7
+        if: steps.check.outputs.configured == 'true'
+        with:
+          node-version: 22
+          cache: npm
+          cache-dependency-path: package-lock.json
+
+      - name: Install dependencies
+        if: steps.check.outputs.configured == 'true'
+        run: npm ci
+
+      - name: Configure AWS credentials
+        if: steps.check.outputs.configured == 'true'
+        uses: aws-actions/configure-aws-credentials@e1253824e5c10ff9df46874f81ed3ec929e19cfd # v6
+        with:
+          role-to-assume: ${{ secrets.AWS_DEPLOY_ROLE_ARN }}
+          aws-region: ${{ vars.AWS_REGION }}
+
+      # The CDK app instantiates the web stack too, which stages web/dist
+      # as an asset; an empty placeholder satisfies that until the real
+      # build below replaces it.
+      - name: Placeholder frontend build
+        if: steps.check.outputs.configured == 'true'
+        run: mkdir -p web/dist && echo placeholder > web/dist/index.html
+
+      - name: Deploy backend stack
+        if: steps.check.outputs.configured == 'true'
+        working-directory: infra
+        env:
+          HOSTED_ZONE_ID: ${{ vars.HOSTED_ZONE_ID }}
+        run: npx cdk deploy TasklisterBackendStack --require-approval never --outputs-file cdk-outputs.json
+
+      - name: Read backend outputs
+        if: steps.check.outputs.configured == 'true'
+        id: backend-outputs
+        working-directory: infra
+        run: echo "json=$(jq -c . cdk-outputs.json)" >> "$GITHUB_OUTPUT"
+
+      # Bakes the (non-secret) API/Cognito endpoints into the bundle.
+      - name: Build frontend
+        if: steps.check.outputs.configured == 'true'
+        working-directory: web
+        run: npm run build
+        env:
+          # `|| '{}'`: fromJson('') would fail template evaluation even
+          # when this step is skipped.
+          VITE_APPSYNC_URL: ${{ fromJson(steps.backend-outputs.outputs.json || '{}').TasklisterBackendStack.ApiUrl }}
+          VITE_USER_POOL_ID: ${{ fromJson(steps.backend-outputs.outputs.json || '{}').TasklisterBackendStack.UserPoolId }}
+          VITE_USER_POOL_CLIENT_ID: ${{ fromJson(steps.backend-outputs.outputs.json || '{}').TasklisterBackendStack.UserPoolClientId }}
+
+      - name: Deploy certificate and web stacks
+        if: steps.check.outputs.configured == 'true'
+        working-directory: infra
+        env:
+          HOSTED_ZONE_ID: ${{ vars.HOSTED_ZONE_ID }}
+        run: npx cdk deploy TasklisterCertStack TasklisterWebStack --require-approval never --outputs-file cdk-outputs-web.json
+
+      - name: Smoke test
+        if: steps.check.outputs.configured == 'true'
+        run: |
+          set -e
+          body=$(curl -fsS --retry 5 --retry-delay 5 --retry-all-errors https://lists.mboapps.click/)
+          echo "$body" | grep -q '<div id="root">' || { echo "::error::site did not return the app shell"; exit 1; }
