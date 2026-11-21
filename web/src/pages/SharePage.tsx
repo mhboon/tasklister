@@ -13,10 +13,13 @@ export function SharePage() {
   const sharedTitle = params.get('title')?.trim() ?? '';
   const sharedText = params.get('text')?.trim() ?? '';
   const sharedUrl = params.get('url')?.trim() ?? '';
-  // Many apps put the link inside `text`, others in `url`; keep whatever is extra as notes.
-  const firstLine = sharedText.split('\n')[0];
-  const initialTitle = sharedTitle || firstLine || sharedUrl;
-  const initialNotes = [sharedText === initialTitle ? '' : sharedText, sharedUrl && !sharedText.includes(sharedUrl) ? sharedUrl : '']
+  // Android often puts the link in `text` and leaves `url` empty (iOS Shortcuts
+  // do too), so pull the URL out of `text` when `url` is missing.
+  const url = sharedUrl || sharedText.match(/https?:\/\/[^\s<>"]+/i)?.[0] || '';
+  const textWithoutUrl = url ? sharedText.replace(url, '').replace(/\s+/g, ' ').trim() : sharedText;
+  const initialTitle = sharedTitle || textWithoutUrl.split('\n')[0] || url;
+  // Whatever isn't already the title (extra text, the link) goes into the notes.
+  const initialNotes = [textWithoutUrl !== initialTitle ? textWithoutUrl : '', url !== initialTitle ? url : '']
     .filter(Boolean)
     .join('\n');
 

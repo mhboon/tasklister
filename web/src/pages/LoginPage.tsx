@@ -1,5 +1,5 @@
 import { useState } from 'react';
-import { Navigate, useNavigate } from 'react-router-dom';
+import { Navigate, useLocation, useNavigate } from 'react-router-dom';
 import { login, toAuthenticatedUser } from '../lib/auth';
 import { useAuth } from '../lib/useAuth';
 
@@ -8,6 +8,9 @@ type Step = { kind: 'credentials' } | { kind: 'new-password'; complete: (pw: str
 export function LoginPage() {
   const { user, setUser } = useAuth();
   const navigate = useNavigate();
+  // Where the user was heading (e.g. a shared link) before being asked to sign in.
+  const from = (useLocation().state as { from?: string } | null)?.from;
+  const dest = from && from.startsWith('/') && !from.startsWith('//') ? from : '/';
   const [email, setEmail] = useState('');
   const [password, setPassword] = useState('');
   const [newPassword, setNewPassword] = useState('');
@@ -15,7 +18,7 @@ export function LoginPage() {
   const [error, setError] = useState<string | null>(null);
   const [busy, setBusy] = useState(false);
 
-  if (user) return <Navigate to="/" replace />;
+  if (user) return <Navigate to={dest} replace />;
 
   async function submit(e: React.FormEvent) {
     e.preventDefault();
@@ -26,14 +29,14 @@ export function LoginPage() {
         const result = await login(email, password);
         if (result.type === 'success') {
           setUser(toAuthenticatedUser(result.session));
-          navigate('/');
+          navigate(dest, { replace: true });
         } else {
           setStep({ kind: 'new-password', complete: result.completeNewPassword });
         }
       } else {
         const session = await step.complete(newPassword);
         setUser(toAuthenticatedUser(session));
-        navigate('/');
+        navigate(dest, { replace: true });
       }
     } catch (err) {
       setError(friendly(err as Error));

@@ -8,7 +8,7 @@ This file is *how* to work here. Same conventions as the sibling popla repo.
 - Infra is AWS CDK (TypeScript) in `infra/`. No hand-written CloudFormation,
   SAM or Terraform.
 - AppSync (GraphQL) + Cognito + DynamoDB + Lambda; frontend is React + Vite +
-  TypeScript on S3 + CloudFront at `lists.mboapps.click`.
+  TypeScript on S3 + CloudFront at `<your-domain>`.
 - Every query/mutation is a *direct Lambda resolver* into one API Lambda
   (`infra/lambda/api`) because each operation needs a cross-table access
   check. Add a field: schema → handler in `lambda/api/handlers/` → entry in
@@ -16,7 +16,8 @@ This file is *how* to work here. Same conventions as the sibling popla repo.
 - One DynamoDB table per entity, not single-table design.
 - No account IDs, ARNs or hosted-zone IDs in committed code. Stacks take the
   account from deploy credentials; the hosted zone ID comes from the
-  `HOSTED_ZONE_ID` env var / GitHub Actions variable.
+  `HOSTED_ZONE_ID` env var / GitHub Actions variable. The zone name and site
+  domain likewise come from `HOSTED_ZONE_NAME` and `SITE_DOMAIN`.
 - There is no separate QA environment: everything deploys straight to the one
   account. Be careful with changes to tables (all `RETAIN` + PITR).
 - The CSP (`infra/lib/web-stack.ts`) forbids inline styles and third-party

@@ -26,11 +26,11 @@ jobs:
       - name: Check AWS deploy configuration
         id: check
         run: |
-          if [ -n "${{ secrets.AWS_DEPLOY_ROLE_ARN }}" ] && [ -n "${{ vars.AWS_REGION }}" ] && [ -n "${{ vars.HOSTED_ZONE_ID }}" ]; then
+          if [ -n "${{ secrets.AWS_DEPLOY_ROLE_ARN }}" ] && [ -n "${{ vars.AWS_REGION }}" ] && [ -n "${{ vars.HOSTED_ZONE_ID }}" ] && [ -n "${{ vars.HOSTED_ZONE_NAME }}" ] && [ -n "${{ vars.SITE_DOMAIN }}" ]; then
             echo "configured=true" >> "$GITHUB_OUTPUT"
           else
             echo "configured=false" >> "$GITHUB_OUTPUT"
-            MSG="AWS_DEPLOY_ROLE_ARN secret and/or AWS_REGION / HOSTED_ZONE_ID variables are not set — skipping deploy. See README.md."
+            MSG="AWS_DEPLOY_ROLE_ARN secret and/or AWS_REGION / HOSTED_ZONE_ID / HOSTED_ZONE_NAME / SITE_DOMAIN variables are not set — skipping deploy. See README.md."
             echo "::notice::$MSG"
             echo "$MSG" >> "$GITHUB_STEP_SUMMARY"
           fi
@@ -68,6 +68,8 @@ jobs:
         working-directory: infra
         env:
           HOSTED_ZONE_ID: ${{ vars.HOSTED_ZONE_ID }}
+          HOSTED_ZONE_NAME: ${{ vars.HOSTED_ZONE_NAME }}
+          SITE_DOMAIN: ${{ vars.SITE_DOMAIN }}
         run: npx cdk deploy TasklisterBackendStack --require-approval never --outputs-file cdk-outputs.json
 
       - name: Read backend outputs
@@ -93,11 +95,15 @@ jobs:
         working-directory: infra
         env:
           HOSTED_ZONE_ID: ${{ vars.HOSTED_ZONE_ID }}
+          HOSTED_ZONE_NAME: ${{ vars.HOSTED_ZONE_NAME }}
+          SITE_DOMAIN: ${{ vars.SITE_DOMAIN }}
         run: npx cdk deploy TasklisterCertStack TasklisterWebStack --require-approval never --outputs-file cdk-outputs-web.json
 
       - name: Smoke test
         if: steps.check.outputs.configured == 'true'
+        env:
+          SITE_DOMAIN: ${{ vars.SITE_DOMAIN }}
         run: |
           set -e
-          body=$(curl -fsS --retry 5 --retry-delay 5 --retry-all-errors https://lists.mboapps.click/)
+          body=$(curl -fsS --retry 5 --retry-delay 5 --retry-all-errors "https://${SITE_DOMAIN}/")
           echo "$body" | grep -q '<div id="root">' || { echo "::error::site did not return the app shell"; exit 1; }

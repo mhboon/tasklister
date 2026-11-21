@@ -1,7 +1,7 @@
 # Tasklister — Spec
 
 A personal/family to-do app for browser (laptop and phone). Served at
-`https://lists.mboapps.click`.
+`https://<your-domain>`.
 
 ## People and access
 
@@ -83,4 +83,6 @@ A personal/family to-do app for browser (laptop and phone). Served at
 - The app is installable (manifest + service worker). Once installed on
   Android, it appears in the system Share menu: the share opens a form with
   title, notes, due date, priority and target list. The target list defaults
-  to the one last used. (iOS doesn't support share targets.)
+  to the one last used. (iOS doesn't support share targets: see `docs/ios-share.md` for an Apple
+  Shortcut that opens the same form.) A link shared inside the text is
+  extracted, and signing in first doesn't lose what was shared.

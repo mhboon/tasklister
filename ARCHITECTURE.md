@@ -3,7 +3,7 @@
 Same shape as the popla app, in the same AWS account (no separate QA).
 
 ```
-browser ──► CloudFront (lists.mboapps.click) ──► S3 (private, OAC)   static React app
+browser ──► CloudFront (<your-domain>) ──► S3 (private, OAC)   static React app
    │
    ├──► Cognito (SRP sign-in, email + password)
    └──► AppSync (GraphQL, Cognito auth) ──► ApiFn (Lambda) ──► DynamoDB ×6, Cognito admin API
@@ -15,13 +15,14 @@ EventBridge (daily 03:00 UTC) ──► RecurringFn (Lambda) ──► DynamoDB
 | Stack | Region | Contents |
 |---|---|---|
 | `TasklisterBackendStack` | eu-west-1 | tables, Cognito, AppSync, ApiFn, RecurringFn + schedule |
-| `TasklisterCertStack` | us-east-1 | ACM certificate for `lists.mboapps.click` (CloudFront requires us-east-1), DNS-validated in the existing `mboapps.click` zone |
+| `TasklisterCertStack` | us-east-1 | ACM certificate for `<your-domain>` (CloudFront requires us-east-1), DNS-validated in the existing `<your-zone>` zone |
 | `TasklisterWebStack` | eu-west-1 | S3, CloudFront + security headers/CSP, Route 53 A/AAAA, deploy of `web/dist` |
 | `TasklisterGithubOidcStack` | eu-west-1 | one-time: deploy role for GitHub Actions. Reuses the account's existing GitHub OIDC provider (an account can have only one) |
 
 The web stacks need a concrete `env` for cross-region references, taken from
 `CDK_DEFAULT_ACCOUNT` (deploy credentials), so no account ID is committed. The
-hosted zone ID comes from `HOSTED_ZONE_ID`.
+hosted zone ID, zone name and site domain come from `HOSTED_ZONE_ID`,
+`HOSTED_ZONE_NAME` and `SITE_DOMAIN`.
 
 ## Data (one table per entity)
 
