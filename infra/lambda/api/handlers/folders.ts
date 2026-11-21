@@ -1,6 +1,7 @@
 import { GetCommand, PutCommand, UpdateCommand, DeleteCommand } from '@aws-sdk/lib-dynamodb';
 import { ddb, tables, newId, queryAll, UserError } from '../../shared/db';
 import { requireAdmin } from '../../shared/access';
+import { compareText } from '../../shared/text';
 import { cleanName } from '../../shared/validate';
 import type { Ctx, FolderRow, MemberRow } from '../../shared/types';
 
@@ -19,7 +20,7 @@ export async function listFolders(ctx: Ctx) {
     KeyConditionExpression: 'ownerId = :o',
     ExpressionAttributeValues: { ':o': ctx.userId },
   });
-  return rows.sort((a, b) => a.name.localeCompare(b.name, undefined, { sensitivity: 'base' })).map(dto);
+  return rows.sort((a, b) => compareText(a.name, b.name)).map(dto);
 }
 
 export async function createFolder(ctx: Ctx, args: { name: string }) {

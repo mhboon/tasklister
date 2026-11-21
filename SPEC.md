@@ -10,7 +10,8 @@ A personal/family to-do app for browser (laptop and phone). Served at
 - An admin creates a user (name, email, optionally admin). Nothing is emailed:
   the admin gets a one-time temporary password to pass on, and the user
   must choose their own at first sign-in. Admins can also reset a password and
-  disable/re-enable a user.
+  disable/re-enable a user, except that an admin can't disable or reset the
+  password of another admin.
 - Google sign-in via Cognito is planned, not built. When added, it must only
   admit emails that already exist as users.
 
@@ -29,16 +30,24 @@ A personal/family to-do app for browser (laptop and phone). Served at
   list. A list is in one folder or at the top level. Deleting a folder moves its
   lists to the top level; it never deletes lists.
 - Lists are sorted alphabetically (case-insensitive), with the Inbox pinned first.
-  Folders are sorted alphabetically too.
+  Folders are sorted alphabetically too and shown below the top-level lists.
+  All alphabetical sorting is case-insensitive.
+- Each list shows its number of **open items** (not the number of shares).
+- In a list view, a settings (⚙) button holds rename, share, move to folder
+  and delete/leave. Sharing picks from registered users.
 
 ## Items
 
-- An item has a title, optional **due date**, optional **criticality**
+- An item has a title, optional **notes** (longer text), optional **due date**, optional **criticality**
   (High / Medium / Low), and is open or completed (completed can be undone).
 - An item can have **subitems**, each open or completed. Subitems have only a
   title and status.
 - Removing an item asks for confirmation and takes its subitems with it.
-- Open items show in creation order; completed ones are collapsed below.
+- URLs in an item's title are clickable and open in a new tab.
+- Item delete is a trash icon, shown only when the item is opened.
+- Open items are sorted per list: Inbox newest first, other lists A–Z. The
+  user can switch to A–Z/Z–A, newest/oldest, priority or due date; the choice
+  is remembered per user (in the browser). Completed ones are collapsed below.
 
 ## Recurring items
 
@@ -59,6 +68,8 @@ A personal/family to-do app for browser (laptop and phone). Served at
   grouped by day. Overdue (before today, in the viewer's timezone) is red.
 - **Priority:** open items that have a criticality, across all your lists,
   grouped High / Medium / Low. Items **without** a criticality are not shown.
+- Agenda groups are sorted A–Z within a day; Priority groups A–Z within a
+  level; recurring items are sorted A–Z.
 - Both let you complete, edit and delete items in place.
 
 ## Interpretations worth checking
@@ -66,3 +77,10 @@ A personal/family to-do app for browser (laptop and phone). Served at
 - "Items with criticality are not shown" in Priority was read as *without*.
 - Completed items are excluded from Agenda and Priority.
 - Subitems are removed without a confirmation prompt; items ask.
+
+## Installing and sharing to the app (PWA)
+
+- The app is installable (manifest + service worker). Once installed on
+  Android, it appears in the system Share menu: the share opens a form with
+  title, notes, due date, priority and target list. The target list defaults
+  to the one last used. (iOS doesn't support share targets.)

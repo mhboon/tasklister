@@ -3,6 +3,7 @@ import { ddb, tables, newId, nowIso, batchGet, TIME_ZONE, UserError } from '../.
 import { requireAdmin, requireMember } from '../../shared/access';
 import { materialize, allRecurringFor, type RecurringRow } from '../../shared/recurring-run';
 import { nextOccurrence, maxDate, todayIn, validateSchedule, type Schedule } from '../../shared/schedule';
+import { compareText } from '../../shared/text';
 import { cleanName, cleanCriticality } from '../../shared/validate';
 import type { Ctx, ListRow } from '../../shared/types';
 
@@ -76,7 +77,7 @@ export async function listRecurring(ctx: Ctx) {
   requireAdmin(ctx);
   const rows = await allRecurringFor(ctx.userId);
   const names = await listNamesFor(rows.map((r) => r.targetListId));
-  return rows.sort((a, b) => a.title.localeCompare(b.title, undefined, { sensitivity: 'base' })).map((r) => dto(r, names));
+  return rows.sort((a, b) => compareText(a.title, b.title)).map((r) => dto(r, names));
 }
 
 export async function createRecurring(ctx: Ctx, args: { input: Input }) {

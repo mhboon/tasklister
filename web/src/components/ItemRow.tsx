@@ -1,6 +1,7 @@
 import { useState } from 'react';
 import { api, type Criticality, type Item } from '../lib/api';
 import { isOverdue, relativeLabel } from '../lib/dates';
+import { Linkified } from './Linkified';
 import { ConfirmDialog } from './ConfirmDialog';
 import { useAuth } from '../lib/useAuth';
 
@@ -22,6 +23,7 @@ export function ItemRow({ item, onChange, showList, onError }: Props) {
   const [busy, setBusy] = useState(false);
   const [newSub, setNewSub] = useState('');
   const [title, setTitle] = useState(item.title);
+  const [notes, setNotes] = useState(item.notes ?? '');
 
   const done = item.status === 'DONE';
   const overdue = isOverdue(item.dueDate, item.status);
@@ -50,8 +52,9 @@ export function ItemRow({ item, onChange, showList, onError }: Props) {
             run(() => api.setItemStatus(item.listId, item.itemId, done ? 'OPEN' : 'DONE'), onChange)
           }
         />
-        <button type="button" className="item-title" onClick={() => setOpen(!open)} aria-expanded={open}>
-          <span className="title-text">{item.title}</span>
+        {/* A div, not a button: the title can contain links, and links can't nest in buttons. */}
+        <div className="item-title" onClick={() => setOpen(!open)}>
+          <span className="title-text"><Linkified text={item.title} /></span>
           <span className="badges">
             {item.dueDate && <span className={`badge due${overdue ? ' overdue' : ''}`}>{relativeLabel(item.dueDate)}</span>}
             {item.criticality && <span className={`badge crit-${item.criticality}`}>{CRIT_LABEL[item.criticality]}</span>}
@@ -59,6 +62,15 @@ export function ItemRow({ item, onChange, showList, onError }: Props) {
             {item.subitems.length > 0 && <span className="badge muted-badge">{doneSubs}/{item.subitems.length}</span>}
             {showList && item.listName && <span className="badge list-badge">{item.listName}</span>}
           </span>
+        </div>
+        <button
+          type="button"
+          className="icon-btn expand-btn"
+          aria-label={open ? 'Hide details' : 'Show details'}
+          aria-expanded={open}
+          onClick={() => setOpen(!open)}
+        >
+          {open ? '▴' : '▾'}
         </button>
       </div>
 
@@ -144,7 +156,27 @@ export function ItemRow({ item, onChange, showList, onError }: Props) {
             </label>
           </div>
 
-          {isAdmin && <button type="button" className="danger-link" onClick={() => setConfirmDelete(true)}>Delete item</button>}
+          <label className="field">
+            <span>Notes</span>
+            <textarea
+              value={notes}
+              rows={3}
+              maxLength={5000}
+              onChange={(e) => setNotes(e.target.value)}
+              onBlur={() => {
+                const n = notes.trim();
+                if (n !== (item.notes ?? '')) run(() => api.updateItem(item.listId, item.itemId, { notes: n || null }), onChange);
+              }}
+            />
+          </label>
+
+          {isAdmin && (
+            <button type="button" className="icon-btn delete-btn" aria-label="Delete item" title="Delete item" onClick={() => setConfirmDelete(true)}>
+              <svg viewBox="0 0 24 24" width="20" height="20" aria-hidden="true" fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round">
+                <path d="M3 6h18M8 6V4h8v2M6 6l1 14h10l1-14M10 11v6M14 11v6" />
+              </svg>
+            </button>
+          )}
         </div>
       )}
 

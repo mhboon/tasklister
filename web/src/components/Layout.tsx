@@ -2,6 +2,7 @@ import { useState } from 'react';
 import { NavLink, Outlet, useNavigate } from 'react-router-dom';
 import { useAuth } from '../lib/useAuth';
 import { useAppData } from '../lib/AppData';
+import { compareText } from '../lib/sort';
 import { api, type ListSummary } from '../lib/api';
 import { ConfirmDialog } from './ConfirmDialog';
 import { PromptDialog } from './PromptDialog';
@@ -21,6 +22,7 @@ export function Layout() {
   const [prompt, setPrompt] = useState<Prompt | null>(null);
   const [deleteFolderId, setDeleteFolderId] = useState<string | null>(null);
 
+  const sortedFolders = [...folders].sort((a, b) => compareText(a.name, b.name));
   const inbox = lists.find((l) => l.isInbox);
   const others = lists.filter((l) => !l.isInbox);
   const rootLists = others.filter((l) => !l.folderId || !folders.some((f) => f.folderId === l.folderId));
@@ -31,7 +33,7 @@ export function Layout() {
       <NavLink to={`/lists/${l.listId}`} onClick={close} className={({ isActive }) => (isActive ? 'active' : '')}>
         <span className="nav-name">{l.name}</span>
         {!l.isOwner && <span className="nav-note" title={`Shared by ${l.ownerName}`}>shared</span>}
-        {l.isOwner && l.memberCount > 1 && <span className="nav-note">{l.memberCount}</span>}
+        {l.openCount > 0 && <span className="nav-count" title="Open items">{l.openCount}</span>}
       </NavLink>
     </li>
   );
@@ -99,7 +101,8 @@ export function Layout() {
         </div>
 
         <ul className="nav-list">
-          {folders.map((f) => {
+          {rootLists.map(listLink)}
+          {sortedFolders.map((f) => {
             const inFolder = others.filter((l) => l.folderId === f.folderId);
             const isCollapsed = collapsed.has(f.folderId);
             return (
@@ -122,7 +125,6 @@ export function Layout() {
               </li>
             );
           })}
-          {rootLists.map(listLink)}
         </ul>
 
         <ul className="nav-list nav-footer">

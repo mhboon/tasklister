@@ -1,4 +1,5 @@
 import { useState } from 'react';
+import { compareText } from '../lib/sort';
 import { api, type Criticality, type Frequency, type Recurring, type RecurringInput } from '../lib/api';
 import { useAppData } from '../lib/AppData';
 import { useLoad } from '../lib/useLoad';
@@ -45,7 +46,7 @@ export function RecurringPage() {
       {loading && <p className="muted">Loading…</p>}
       {!loading && (data ?? []).length === 0 && <p className="muted empty">No recurring items yet.</p>}
       <ul className="items">
-        {(data ?? []).map((r) => (
+        {[...(data ?? [])].sort((a, b) => compareText(a.title, b.title)).map((r) => (
           <li key={r.recurringId} className={`item${r.active ? '' : ' done'}`}>
             <div className="item-main recurring-row">
               <div className="grow">

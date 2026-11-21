@@ -44,6 +44,8 @@ type ListSummary {
   "The caller's own folder for this list; null = root."
   folderId: ID
   memberCount: Int!
+  "Open (not completed) items in the list; subitems are not counted."
+  openCount: Int!
 }
 
 type Member {
@@ -64,6 +66,8 @@ type Item {
   listId: ID!
   listName: String
   title: String!
+  "Longer free text."
+  notes: String
   status: Status!
   "YYYY-MM-DD"
   dueDate: String
@@ -108,6 +112,8 @@ input RecurringInput {
 
 input ItemPatch {
   title: String
+  "Explicit null (or blank) clears the notes."
+  notes: String
   "Explicit null clears the due date."
   dueDate: String
   "Explicit null clears the criticality."
@@ -154,7 +160,7 @@ type Mutation {
   unshareList(listId: ID!, userId: ID!): Boolean!
 
   # --- items
-  createItem(listId: ID!, title: String!, dueDate: String, criticality: Criticality): Item!
+  createItem(listId: ID!, title: String!, notes: String, dueDate: String, criticality: Criticality): Item!
   updateItem(listId: ID!, itemId: ID!, patch: ItemPatch!): Item!
   setItemStatus(listId: ID!, itemId: ID!, status: Status!): Item!
   deleteItem(listId: ID!, itemId: ID!): Boolean!

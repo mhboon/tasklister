@@ -8,6 +8,7 @@ export interface ItemDto {
   listId: string;
   listName?: string;
   title: string;
+  notes: string | null;
   status: 'OPEN' | 'DONE';
   dueDate: string | null;
   criticality: Criticality | null;
@@ -35,6 +36,7 @@ export function assembleItems(rows: ItemRow[], listName?: string): ItemDto[] {
       listId: r.listId,
       listName,
       title: r.title,
+      notes: r.notes ?? null,
       status: r.status,
       dueDate: r.dueDate ?? null,
       criticality: r.criticality ?? null,
@@ -61,6 +63,7 @@ export async function getItemRow(listId: string, itemId: string): Promise<ItemRo
 export async function putItem(args: {
   listId: string;
   title: string;
+  notes?: string;
   dueDate?: string;
   criticality?: Criticality;
   recurringId?: string;
@@ -69,6 +72,7 @@ export async function putItem(args: {
     listId: args.listId,
     itemId: newId(),
     title: args.title,
+    notes: args.notes,
     status: 'OPEN',
     dueDate: args.dueDate,
     criticality: args.criticality,
