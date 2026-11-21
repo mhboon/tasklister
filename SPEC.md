@@ -42,7 +42,9 @@ A personal/family to-do app for browser (laptop and phone). Served at
 - **Folders** organise lists. They are one level deep and **personal**: your
   folders and where you put a list are only what you see, even for a shared
   list. A list is in one folder or at the top level. Deleting a folder moves its
-  lists to the top level; it never deletes lists.
+  lists to the top level; it never deletes lists. Deleting is a separate button
+  inside the folder's edit dialog (the pencil in the navigation), with its own
+  confirmation, so it can't be hit by accident.
 - Lists are sorted alphabetically (case-insensitive), with the Inbox pinned first.
   Folders are sorted alphabetically too and shown below the top-level lists.
   All alphabetical sorting is case-insensitive.
@@ -64,7 +66,7 @@ A personal/family to-do app for browser (laptop and phone). Served at
 - A new item is created from a title alone (one line, a + button). Date,
   priority, notes and subitems are set by opening the item: beside the list
   on a wide screen, as a screen of its own on a phone. Users work the same way.
-- An opened item shows, in this order: title, list (to move it), due date
+- An opened item shows, in this order: a checkbox to complete it with the title, list (to move it), due date
   (clock button to pick, ✕ to clear), priority ("priority not set" when
   empty), subitems (the add box above the list; open ones A–Z, then completed ones
   A–Z), notes. List, due date and priority have no text labels. Back is
@@ -75,6 +77,7 @@ A personal/family to-do app for browser (laptop and phone). Served at
   check stores them.
 - URLs in an item's title are clickable and open in a new tab.
 - Item delete is a trash icon, shown only when the item is opened.
+- The opened item also shows when it was created (date and time, small and grey).
 - Open items are sorted per list: Inbox newest first, other lists A–Z. The
   user can switch the sort with a small box next to the list name (AZ,
   Created, Priority, Due; ↑ ascending, ↓ descending: priority high → low →
@@ -178,6 +181,8 @@ A personal/family to-do app for browser (laptop and phone). Served at
 ## Voice
 
 - A mic button next to the add box dictates an item (where the browser
-  supports speech recognition; it is hidden otherwise). The title is the first
+  supports speech recognition; it is hidden otherwise). It listens until you tap
+  it again (it shows a stop icon meanwhile), however long you pause; stopping
+  only ends the dictation, you then check the text and add it. The title is the first
   80 characters cut at a whole word. When it had to be cut, the full text goes
   into the notes. It listens in the phone's language.

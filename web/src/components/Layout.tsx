@@ -131,8 +131,7 @@ export function Layout() {
                   </button>
                   {canWork && <>
                   <button type="button" className="icon-btn small" aria-label={`New list in ${f.name}`} title="New list here" onClick={() => setPrompt({ kind: 'list', folderId: f.folderId })}>＋</button>
-                  <button type="button" className="icon-btn small" aria-label={`Rename folder ${f.name}`} title="Rename folder" onClick={() => setPrompt({ kind: 'rename-folder', folderId: f.folderId, name: f.name })}>✎</button>
-                  <button type="button" className="icon-btn small" aria-label={`Delete folder ${f.name}`} title="Delete folder" onClick={() => setDeleteFolderId(f.folderId)}>✕</button>
+                  <button type="button" className="icon-btn small" aria-label={`Edit folder ${f.name}`} title="Edit folder" onClick={() => setPrompt({ kind: 'rename-folder', folderId: f.folderId, name: f.name })}>✎</button>
                   </>}
                 </div>
                 {!isCollapsed && (
@@ -160,10 +159,21 @@ export function Layout() {
 
       <PromptDialog
         open={prompt !== null}
-        title={prompt?.kind === 'list' ? 'New list' : prompt?.kind === 'folder' ? 'New folder' : 'Rename folder'}
+        title={prompt?.kind === 'list' ? 'New list' : prompt?.kind === 'folder' ? 'New folder' : 'Edit folder'}
         label="Name"
         initial={prompt?.kind === 'rename-folder' ? prompt.name : ''}
-        confirmLabel={prompt?.kind === 'rename-folder' ? 'Rename' : 'Create'}
+        confirmLabel={prompt?.kind === 'rename-folder' ? 'Save' : 'Create'}
+        dangerAction={
+          prompt?.kind === 'rename-folder'
+            ? {
+                label: 'Delete folder',
+                onClick: () => {
+                  setDeleteFolderId(prompt.folderId);
+                  setPrompt(null);
+                },
+              }
+            : undefined
+        }
         onSubmit={submitPrompt}
         onCancel={() => setPrompt(null)}
       />
