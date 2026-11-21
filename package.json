@@ -1,0 +1,30 @@
+{
+  "name": "tasklister",
+  "private": true,
+  "workspaces": [
+    "infra",
+    "web"
+  ],
+  "engines": {
+    "node": ">=22"
+  },
+  "scripts": {
+    "prepare": "husky",
+    "test": "npm test --workspace infra"
+  },
+  "lint-staged": {
+    "infra/**/*.ts": [
+      "eslint --fix --config infra/eslint.config.mjs"
+    ],
+    "web/**/*.{ts,tsx}": [
+      "eslint --fix --config web/eslint.config.mjs"
+    ]
+  },
+  "devDependencies": {
+    "husky": "^9.1.7",
+    "lint-staged": "^17.6.0"
+  },
+  "allowScripts": {
+    "esbuild@0.28.2": true
+  }
+}

@@ -1,0 +1,174 @@
+enum Criticality {
+  HIGH
+  MEDIUM
+  LOW
+}
+
+enum Status {
+  OPEN
+  DONE
+}
+
+enum Frequency {
+  DAILY
+  WEEKLY
+  MONTHLY
+}
+
+type User {
+  userId: ID!
+  email: String!
+  displayName: String!
+  isAdmin: Boolean!
+  enabled: Boolean!
+}
+
+"Returned once by createUser / resetUserPassword; never stored."
+type UserWithPassword {
+  user: User!
+  temporaryPassword: String!
+}
+
+type Folder {
+  folderId: ID!
+  name: String!
+}
+
+type ListSummary {
+  listId: ID!
+  name: String!
+  ownerId: ID!
+  ownerName: String!
+  isOwner: Boolean!
+  isInbox: Boolean!
+  "The caller's own folder for this list; null = root."
+  folderId: ID
+  memberCount: Int!
+}
+
+type Member {
+  userId: ID!
+  email: String!
+  displayName: String!
+  isOwner: Boolean!
+}
+
+type Subitem {
+  subitemId: ID!
+  title: String!
+  status: Status!
+}
+
+type Item {
+  itemId: ID!
+  listId: ID!
+  listName: String
+  title: String!
+  status: Status!
+  "YYYY-MM-DD"
+  dueDate: String
+  criticality: Criticality
+  recurringId: ID
+  subitems: [Subitem!]!
+  createdAt: String!
+  completedAt: String
+}
+
+type Recurring {
+  recurringId: ID!
+  title: String!
+  targetListId: ID!
+  targetListName: String
+  frequency: Frequency!
+  "Every N days/weeks/months."
+  interval: Int!
+  "0 = Sunday … 6 = Saturday. WEEKLY only."
+  weekday: Int
+  "1–31, clamped to the month's length. MONTHLY only."
+  dayOfMonth: Int
+  "YYYY-MM-DD: first occurrence on or after this date."
+  startDate: String!
+  "YYYY-MM-DD: the next occurrence the scheduler will act on."
+  nextDue: String!
+  criticality: Criticality
+  active: Boolean!
+}
+
+input RecurringInput {
+  title: String!
+  targetListId: ID!
+  frequency: Frequency!
+  interval: Int!
+  weekday: Int
+  dayOfMonth: Int
+  startDate: String!
+  criticality: Criticality
+  active: Boolean
+}
+
+input ItemPatch {
+  title: String
+  "Explicit null clears the due date."
+  dueDate: String
+  "Explicit null clears the criticality."
+  criticality: Criticality
+}
+
+type Query {
+  me: User!
+  listUsers: [User!]!
+  listFolders: [Folder!]!
+  listLists: [ListSummary!]!
+  listMembers(listId: ID!): [Member!]!
+  listItems(listId: ID!): [Item!]!
+  "Open items with a due date, across every list the caller can see."
+  listAgenda: [Item!]!
+  "Open items with a criticality, across every list the caller can see."
+  listPriority: [Item!]!
+  listRecurring: [Recurring!]!
+}
+
+type Mutation {
+  # --- admin: who is authorized to use the app at all
+  createUser(email: String!, displayName: String!, isAdmin: Boolean): UserWithPassword!
+  resetUserPassword(userId: ID!): UserWithPassword!
+  setUserEnabled(userId: ID!, enabled: Boolean!): User!
+  "Promote a guest to admin, or demote. Applies from their next sign-in."
+  setUserAdmin(userId: ID!, isAdmin: Boolean!): User!
+
+  # --- folders (personal to the caller)
+  createFolder(name: String!): Folder!
+  renameFolder(folderId: ID!, name: String!): Folder!
+  deleteFolder(folderId: ID!): Boolean!
+
+  # --- lists
+  createList(name: String!, folderId: ID): ListSummary!
+  renameList(listId: ID!, name: String!): ListSummary!
+  "Owner only. Deletes the list, its items and every membership."
+  deleteList(listId: ID!): Boolean!
+  "Moves the list within the caller's own folder tree only."
+  moveList(listId: ID!, folderId: ID): ListSummary!
+  "Owner only. The invitee must already be an authorized user."
+  shareList(listId: ID!, email: String!): [Member!]!
+  "Owner removes anyone; any member may remove themselves."
+  unshareList(listId: ID!, userId: ID!): Boolean!
+
+  # --- items
+  createItem(listId: ID!, title: String!, dueDate: String, criticality: Criticality): Item!
+  updateItem(listId: ID!, itemId: ID!, patch: ItemPatch!): Item!
+  setItemStatus(listId: ID!, itemId: ID!, status: Status!): Item!
+  deleteItem(listId: ID!, itemId: ID!): Boolean!
+  addSubitem(listId: ID!, itemId: ID!, title: String!): Item!
+  setSubitemStatus(listId: ID!, itemId: ID!, subitemId: ID!, status: Status!): Item!
+  deleteSubitem(listId: ID!, itemId: ID!, subitemId: ID!): Item!
+
+  # --- recurring items (personal to the caller)
+  createRecurring(input: RecurringInput!): Recurring!
+  updateRecurring(recurringId: ID!, input: RecurringInput!): Recurring!
+  deleteRecurring(recurringId: ID!): Boolean!
+}
+
+schema {
+  query: Query
+  mutation: Mutation
+}
