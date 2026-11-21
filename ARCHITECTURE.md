@@ -17,7 +17,7 @@ EventBridge (daily 03:00 UTC) ──► RecurringFn (Lambda) ──► DynamoDB
 | `TasklisterBackendStack` | eu-west-1 | tables, Cognito, AppSync, ApiFn, RecurringFn + schedule |
 | `TasklisterCertStack` | us-east-1 | ACM certificate for `lists.mboapps.click` (CloudFront requires us-east-1), DNS-validated in the existing `mboapps.click` zone |
 | `TasklisterWebStack` | eu-west-1 | S3, CloudFront + security headers/CSP, Route 53 A/AAAA, deploy of `web/dist` |
-| `GithubOidcStack` | eu-west-1 | one-time: deploy role for GitHub Actions. Reuses the account's existing GitHub OIDC provider (an account can have only one) |
+| `TasklisterGithubOidcStack` | eu-west-1 | one-time: deploy role for GitHub Actions. Reuses the account's existing GitHub OIDC provider (an account can have only one) |
 
 The web stacks need a concrete `env` for cross-region references, taken from
 `CDK_DEFAULT_ACCOUNT` (deploy credentials), so no account ID is committed. The

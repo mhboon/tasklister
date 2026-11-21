@@ -22,6 +22,11 @@ This file is *how* to work here. Same conventions as the sibling popla repo.
 - The CSP (`infra/lib/web-stack.ts`) forbids inline styles and third-party
   origins. Don't use React `style={}` props; use CSS classes.
 
+- **Every CloudFormation stack name here must start with `Tasklister`.** This
+  account also holds popla's stacks (`PoplaBackendStack`, `GithubOidcStack`, …);
+  deploying a stack with a name that already exists *updates popla's stack*.
+  Before any `cdk deploy`, check the stack name isn't already in the account.
+
 ## Checks
 
 `npm test` (unit tests for the recurrence maths), `npm run lint` and
