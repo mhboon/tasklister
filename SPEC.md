@@ -122,3 +122,8 @@ A personal/family to-do app for browser (laptop and phone). Served at
   to the one last used. (iOS doesn't support share targets: see `docs/ios-share.md` for an Apple
   Shortcut that opens the same form.) A link shared inside the text is
   extracted, and signing in first doesn't lose what was shared.
+- When a link is shared, the app looks the page up (Open Graph tags, then the
+  page title) and pre-fills the title and notes with what it finds, without
+  overwriting anything you typed. Pages that block bots or need a login (many
+  Instagram, LinkedIn and Gmail links) give nothing, and the form stays as
+  shared. The lookup only reaches public web addresses.

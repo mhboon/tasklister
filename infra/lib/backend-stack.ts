@@ -135,7 +135,7 @@ export class TasklisterBackendStack extends Stack {
     const fields: Record<string, string[]> = {
       Query: [
         'me', 'listUsers', 'listFolders', 'listLists', 'listMembers', 'listItems',
-        'listAgenda', 'listPriority', 'listRecurring',
+        'listAgenda', 'listPriority', 'listRecurring', 'linkPreview',
       ],
       Mutation: [
         'createUser', 'resetUserPassword', 'setUserEnabled', 'setUserRole',

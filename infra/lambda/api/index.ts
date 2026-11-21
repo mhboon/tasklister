@@ -6,6 +6,7 @@ import * as folders from './handlers/folders';
 import * as lists from './handlers/lists';
 import * as items from './handlers/items';
 import * as recurring from './handlers/recurring';
+import * as preview from './handlers/preview';
 
 type Handler = (ctx: Ctx, args: never) => Promise<unknown>;
 
@@ -44,6 +45,8 @@ const handlers: Record<string, Handler> = {
   addSubitem: items.addSubitem,
   setSubitemStatus: items.setSubitemStatus,
   deleteSubitem: items.deleteSubitem,
+
+  linkPreview: preview.linkPreview,
 
   listRecurring: recurring.listRecurring,
   createRecurring: recurring.createRecurring,

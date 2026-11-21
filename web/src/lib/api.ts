@@ -23,6 +23,7 @@ export interface Recurring {
   frequency: Frequency; interval: number; weekday: number | null; dayOfMonth: number | null;
   startDate: string; nextDue: string; criticality: Criticality | null; active: boolean;
 }
+export interface LinkPreview { url: string; title: string | null; description: string | null; siteName: string | null }
 export interface RecurringInput {
   title: string; targetListId: string; frequency: Frequency; interval: number;
   weekday?: number | null; dayOfMonth?: number | null; startDate: string;
@@ -179,6 +180,13 @@ export const api = {
       'deleteSubitem',
       `mutation($listId:ID!,$itemId:ID!,$subitemId:ID!){ deleteSubitem(listId:$listId,itemId:$itemId,subitemId:$subitemId){ ${ITEM} } }`,
       { listId, itemId, subitemId }
+    ),
+
+  linkPreview: (url: string) =>
+    q<'linkPreview', LinkPreview>(
+      'linkPreview',
+      `query($url:String!){ linkPreview(url:$url){ url title description siteName } }`,
+      { url }
     ),
 
   listRecurring: () => q<'listRecurring', Recurring[]>('listRecurring', `query { listRecurring { ${RECURRING} } }`),
