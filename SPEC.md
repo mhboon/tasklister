@@ -7,15 +7,27 @@ A personal/family to-do app for browser (laptop and phone). Served at
 
 - Sign-in is email + password. **Only users an admin has created can sign in**;
   there is no self sign-up and no self-service password recovery.
-- An admin creates a user (name, email, optionally admin). Nothing is emailed:
+- There are three roles. A **guest** only works on lists shared with them
+  (no Inbox, can't create lists or folders). A **user** has a workspace of
+  their own (Inbox, lists, folders, recurring items). An **admin** is a user
+  who also manages people.
+- An admin creates a user (name, email, role). Nothing is emailed:
   the admin gets a one-time temporary password to pass on, and the user
-  must choose their own at first sign-in. Admins can also reset a password and
-  disable/re-enable a user, except that an admin can't disable or reset the
-  password of another admin.
+  must choose their own at first sign-in. Admins can also reset a password,
+  disable/re-enable a user and change roles, except that an admin can't
+  disable or reset the password of another admin. Roles change one step at a
+  time (guest ⇄ user ⇄ admin; so an admin can demote an admin to user, promote
+  a guest to user and a user to admin) and never for yourself. The person is
+  signed out so the new role applies at once.
 - Google sign-in via Cognito is planned, not built. When added, it must only
   admit emails that already exist as users.
 
 ## Lists, folders, sharing
+
+- Lists and items are private to their members: a list (and everything in it)
+  is only visible to its owner and the people it is shared with, whatever role
+  they have. Opening a list or item by its id without access behaves as if it
+  doesn't exist.
 
 - Every user has an **Inbox**: the default list, always first, can't be
   renamed, deleted, moved or shared.
@@ -49,6 +61,8 @@ A personal/family to-do app for browser (laptop and phone). Served at
 - A new item is created from a title alone (one line, a + button). Date,
   priority, notes and subitems are set by opening the item: beside the list
   on a wide screen, as a screen of its own on a phone. Users work the same way.
+- An item can be moved to another list you can access, from the opened item.
+  It takes its subitems along and leaves any recurrence it came from.
 - URLs in an item's title are clickable and open in a new tab.
 - Item delete is a trash icon, shown only when the item is opened.
 - Open items are sorted per list: Inbox newest first, other lists A–Z. The

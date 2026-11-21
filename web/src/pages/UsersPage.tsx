@@ -1,10 +1,15 @@
 import { useState } from 'react';
 import { compareText } from '../lib/sort';
-import { api, type User } from '../lib/api';
+import { api, type Role, type User } from '../lib/api';
 import { useAppData } from '../lib/AppData';
 import { useLoad } from '../lib/useLoad';
 
 interface Issued { email: string; password: string }
+
+const ROLE_LABEL: Record<Role, string> = { ADMIN: 'admin', USER: 'user', GUEST: 'guest' };
+
+/** Roles change one step at a time: guest ⇄ user ⇄ admin. */
+const ROLE_STEPS: Record<Role, Role[]> = { GUEST: ['USER'], USER: ['ADMIN', 'GUEST'], ADMIN: ['USER'] };
 
 export function UsersPage() {
   const { me } = useAppData();
@@ -14,7 +19,7 @@ export function UsersPage() {
   const [openId, setOpenId] = useState<string | 'new' | null>(null);
   const [email, setEmail] = useState('');
   const [name, setName] = useState('');
-  const [admin, setAdmin] = useState(false);
+  const [role, setRole] = useState<Role>('GUEST');
   const [busy, setBusy] = useState(false);
   const [issued, setIssued] = useState<Issued | null>(null);
 
@@ -26,11 +31,11 @@ export function UsersPage() {
     setBusy(true);
     setError(null);
     try {
-      const r = await api.createUser(email, name, admin);
+      const r = await api.createUser(email, name, role);
       setIssued({ email: r.user.email, password: r.temporaryPassword });
       setEmail('');
       setName('');
-      setAdmin(false);
+      setRole('GUEST');
       setOpenId(null);
       await reload();
     } catch (err) {
@@ -53,9 +58,9 @@ export function UsersPage() {
       const r = await api.resetUserPassword(u.userId);
       setIssued({ email: u.email, password: r.temporaryPassword });
     });
-  const setAdminRole = (u: User) =>
+  const changeRole = (u: User, to: Role) =>
     act(async () => {
-      await api.setUserAdmin(u.userId, !u.isAdmin);
+      await api.setUserRole(u.userId, to);
       await reload();
     });
   const toggle = (u: User) =>
@@ -89,7 +94,7 @@ export function UsersPage() {
               <div className="item-main">
                 <div className="item-title" onClick={() => setOpenId(u.userId)}>
                   <div className="grow">
-                    <div className="title-text">{u.displayName}<span className="badge"> {u.isAdmin ? 'admin' : 'guest'}</span>{!u.enabled && <span className="badge"> disabled</span>}</div>
+                    <div className="title-text">{u.displayName}<span className="badge"> {ROLE_LABEL[u.role]}</span>{!u.enabled && <span className="badge"> disabled</span>}</div>
                     <div className="muted small">{u.email}</div>
                   </div>
                 </div>
@@ -110,18 +115,29 @@ export function UsersPage() {
               <h2>Authorize a new user</h2>
               <label className="field"><span>Name</span><input value={name} onChange={(e) => setName(e.target.value)} required maxLength={100} /></label>
               <label className="field"><span>Email</span><input type="email" value={email} onChange={(e) => setEmail(e.target.value)} required /></label>
-              <label className="check"><input type="checkbox" checked={admin} onChange={(e) => setAdmin(e.target.checked)} /> Admin (otherwise a guest: can only work on items in lists shared with them)</label>
+              <label className="field">
+                <span>Role</span>
+                <select value={role} onChange={(e) => setRole(e.target.value as Role)}>
+                  <option value="GUEST">Guest: only lists shared with them</option>
+                  <option value="USER">User: own lists, folders and recurring items</option>
+                  <option value="ADMIN">Admin: also manages people</option>
+                </select>
+              </label>
               <button type="submit" className="primary" disabled={busy}>Create user</button>
             </form>
           ) : (
             selected && (
               <div className="card">
                 <h2>{selected.displayName}</h2>
-                <p className="muted small">{selected.email} · {selected.isAdmin ? 'admin' : 'guest'}{!selected.enabled ? ' · disabled' : ''}</p>
+                <p className="muted small">{selected.email} · {ROLE_LABEL[selected.role]}{!selected.enabled ? ' · disabled' : ''}</p>
                 <div className="user-actions">
-                  <button type="button" onClick={() => setAdminRole(selected)}>{selected.isAdmin ? 'Make guest' : 'Make admin'}</button>
+                  {selected.userId !== me?.userId && ROLE_STEPS[selected.role].map((to) => (
+                    <button key={to} type="button" onClick={() => changeRole(selected, to)}>
+                      {to === 'ADMIN' ? 'Promote to admin' : to === 'USER' ? (selected.role === 'ADMIN' ? 'Demote to user' : 'Make user') : 'Demote to guest'}
+                    </button>
+                  ))}
                   {/* Admins are peers: you can't lock out or take over another admin. */}
-                  {(!selected.isAdmin || selected.userId === me?.userId) && (
+                  {(selected.role !== 'ADMIN' || selected.userId === me?.userId) && (
                     <>
                       <button type="button" onClick={() => reset(selected)}>Reset password</button>
                       {selected.userId !== me?.userId && (

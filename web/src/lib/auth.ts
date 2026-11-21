@@ -83,15 +83,21 @@ export function forceRefreshSession(): Promise<CognitoUserSession | null> {
 export interface AuthenticatedUser {
   email: string;
   idToken: string;
+  role: 'ADMIN' | 'USER' | 'GUEST';
   isAdmin: boolean;
+  /** Admins and users have a workspace of their own; guests only see shared lists. */
+  canWork: boolean;
 }
 
 export function toAuthenticatedUser(session: CognitoUserSession): AuthenticatedUser {
   const token = session.getIdToken();
   const groups = (token.payload['cognito:groups'] as string[] | undefined) ?? [];
+  const role = groups.includes('Admins') ? 'ADMIN' : groups.includes('Users') ? 'USER' : 'GUEST';
   return {
     email: token.payload['email'] as string,
     idToken: token.getJwtToken(),
-    isAdmin: groups.includes('Admins'),
+    role,
+    isAdmin: role === 'ADMIN',
+    canWork: role !== 'GUEST',
   };
 }

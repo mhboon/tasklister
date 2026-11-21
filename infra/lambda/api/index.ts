@@ -1,6 +1,6 @@
 import type { AppSyncResolverEvent } from 'aws-lambda';
 import { UserError } from '../shared/db';
-import type { Ctx } from '../shared/types';
+import type { Ctx, Role } from '../shared/types';
 import * as users from './handlers/users';
 import * as folders from './handlers/folders';
 import * as lists from './handlers/lists';
@@ -17,7 +17,7 @@ const handlers: Record<string, Handler> = {
   createUser: users.createUser,
   resetUserPassword: users.resetUserPassword,
   setUserEnabled: users.setUserEnabled,
-  setUserAdmin: users.setUserAdmin,
+  setUserRole: users.setUserRole,
 
   listFolders: folders.listFolders,
   createFolder: folders.createFolder,
@@ -39,6 +39,7 @@ const handlers: Record<string, Handler> = {
   createItem: items.createItem,
   updateItem: items.updateItem,
   setItemStatus: items.setItemStatus,
+  moveItem: items.moveItem,
   deleteItem: items.deleteItem,
   addSubitem: items.addSubitem,
   setSubitemStatus: items.setSubitemStatus,
@@ -55,7 +56,9 @@ function contextFrom(event: AppSyncResolverEvent<Record<string, unknown>>): Ctx 
   const sub = identity?.sub;
   const email = identity?.claims?.email;
   if (!sub || typeof email !== 'string') throw new UserError('Not signed in.');
-  return { userId: sub, email: email.toLowerCase(), isAdmin: (identity?.groups ?? []).includes('Admins') };
+  const groups = identity?.groups ?? [];
+  const role: Role = groups.includes('Admins') ? 'ADMIN' : groups.includes('Users') ? 'USER' : 'GUEST';
+  return { userId: sub, email: email.toLowerCase(), role, isAdmin: role === 'ADMIN' };
 }
 
 export async function handler(event: AppSyncResolverEvent<Record<string, unknown>>): Promise<unknown> {

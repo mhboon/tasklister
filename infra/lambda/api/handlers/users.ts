@@ -14,10 +14,11 @@ import {
 } from '@aws-sdk/client-cognito-identity-provider';
 import { GetCommand, PutCommand, ScanCommand, TransactWriteCommand } from '@aws-sdk/lib-dynamodb';
 import { ddb, tables, nowIso, UserError, queryAll } from '../../shared/db';
-import { inboxId, requireAdmin } from '../../shared/access';
+import { inboxId, requireAdmin, requireUser } from '../../shared/access';
+import { isAllowedRoleChange } from '../../shared/roles';
 import { compareText } from '../../shared/text';
 import { normEmail, cleanName } from '../../shared/validate';
-import type { Ctx, UserRow } from '../../shared/types';
+import type { Ctx, Role, UserRow } from '../../shared/types';
 
 const cognito = new CognitoIdentityProviderClient({});
 const poolId = () => {
@@ -49,7 +50,7 @@ export async function ensureUser(ctx: Ctx, displayName?: string): Promise<UserRo
       });
   }
   // Guests have no Inbox of their own: they only see lists shared with them.
-  if (ctx.isAdmin) await ensureInbox(ctx.userId);
+  if (ctx.role !== 'GUEST') await ensureInbox(ctx.userId);
   ensured.add(ctx.userId);
   return row;
 }
@@ -82,13 +83,30 @@ async function ensureInbox(userId: string): Promise<void> {
     });
 }
 
-function toUser(row: UserRow, isAdmin: boolean, enabled = true) {
-  return { userId: row.userId, email: row.email, displayName: row.displayName, isAdmin, enabled };
+function toUser(row: UserRow, role: Role, enabled = true) {
+  return { userId: row.userId, email: row.email, displayName: row.displayName, role, isAdmin: role === 'ADMIN', enabled };
+}
+
+const GROUP_FOR: Record<Role, string | null> = { ADMIN: 'Admins', USER: 'Users', GUEST: null };
+const subOf = (u: UserType) => u.Attributes?.find((a) => a.Name === 'sub')?.Value;
+
+async function groupSubs(groupName: string): Promise<Set<string | undefined>> {
+  const members = await allCognito<UserType>(async (t) => {
+    const r = await cognito.send(new ListUsersInGroupCommand({ UserPoolId: poolId(), GroupName: groupName, NextToken: t }));
+    return { items: r.Users ?? [], next: r.NextToken };
+  });
+  return new Set(members.map(subOf));
+}
+
+/** Everyone's role, read from the Cognito groups (the source of truth). */
+async function rolesBySub(): Promise<(sub: string) => Role> {
+  const [admins, users] = await Promise.all([groupSubs('Admins'), groupSubs('Users')]);
+  return (sub) => (admins.has(sub) ? 'ADMIN' : users.has(sub) ? 'USER' : 'GUEST');
 }
 
 export async function me(ctx: Ctx) {
   const row = await ensureUser(ctx);
-  return toUser(row, ctx.isAdmin);
+  return toUser(row, ctx.role);
 }
 
 async function allCognito<T>(fn: (token?: string) => Promise<{ items: T[]; next?: string }>): Promise<T[]> {
@@ -103,24 +121,21 @@ async function allCognito<T>(fn: (token?: string) => Promise<{ items: T[]; next?
 }
 
 export async function listUsers(ctx: Ctx) {
-  requireAdmin(ctx);
+  // Users need the list to pick who to share with; guests don't.
+  requireUser(ctx);
   const users = await allCognito<UserType>(async (t) => {
     const r = await cognito.send(new ListUsersCommand({ UserPoolId: poolId(), PaginationToken: t }));
     return { items: r.Users ?? [], next: r.PaginationToken };
   });
-  const admins = await allCognito<UserType>(async (t) => {
-    const r = await cognito.send(new ListUsersInGroupCommand({ UserPoolId: poolId(), GroupName: 'Admins', NextToken: t }));
-    return { items: r.Users ?? [], next: r.NextToken };
-  });
-  const adminSubs = new Set(admins.map((u) => u.Attributes?.find((a) => a.Name === 'sub')?.Value));
+  const roleOf = await rolesBySub();
   const rows = await queryAllUsers();
   const byId = new Map(rows.map((r) => [r.userId, r]));
   return users
     .map((u) => {
-      const sub = u.Attributes?.find((a) => a.Name === 'sub')?.Value ?? '';
+      const sub = subOf(u) ?? '';
       const email = u.Attributes?.find((a) => a.Name === 'email')?.Value ?? '';
       const row = byId.get(sub) ?? { userId: sub, email, displayName: email.split('@')[0], createdAt: '' };
-      return toUser(row, adminSubs.has(sub), u.Enabled !== false);
+      return toUser(row, roleOf(sub), u.Enabled !== false);
     })
     .sort((a, b) => compareText(a.email, b.email));
 }
@@ -150,7 +165,7 @@ function temporaryPassword(): string {
   return chars.join('');
 }
 
-export async function createUser(ctx: Ctx, args: { email: string; displayName: string; isAdmin?: boolean }) {
+export async function createUser(ctx: Ctx, args: { email: string; displayName: string; role: Role }) {
   requireAdmin(ctx);
   const email = normEmail(args.email);
   if (!/^[^@\s]+@[^@\s]+\.[^@\s]+$/.test(email)) throw new UserError('Enter a valid email address.');
@@ -177,13 +192,20 @@ export async function createUser(ctx: Ctx, args: { email: string; displayName: s
   }
   const sub = created.User?.Attributes?.find((a) => a.Name === 'sub')?.Value;
   if (!sub) throw new Error('Cognito did not return a user id.');
-  if (args.isAdmin) {
-    await cognito.send(new AdminAddUserToGroupCommand({ UserPoolId: poolId(), Username: email, GroupName: 'Admins' }));
+  const role = cleanRole(args.role);
+  const group = GROUP_FOR[role];
+  if (group) {
+    await cognito.send(new AdminAddUserToGroupCommand({ UserPoolId: poolId(), Username: email, GroupName: group }));
   }
   const row: UserRow = { userId: sub, email, displayName, createdAt: nowIso() };
   await ddb.send(new PutCommand({ TableName: tables.users, Item: row }));
-  if (args.isAdmin) await ensureInbox(sub);
-  return { user: toUser(row, !!args.isAdmin), temporaryPassword: password };
+  if (role !== 'GUEST') await ensureInbox(sub);
+  return { user: toUser(row, role), temporaryPassword: password };
+}
+
+function cleanRole(value: unknown): Role {
+  if (value !== 'ADMIN' && value !== 'USER' && value !== 'GUEST') throw new UserError('Invalid role.');
+  return value;
 }
 
 async function userById(userId: string): Promise<UserRow> {
@@ -195,13 +217,7 @@ async function userById(userId: string): Promise<UserRow> {
 /** Admins are peers: one admin can't lock out or take over another. */
 async function requireNotOtherAdmin(ctx: Ctx, target: UserRow, what: string): Promise<void> {
   if (target.userId === ctx.userId) return;
-  const admins = await allCognito<UserType>(async (t) => {
-    const r = await cognito.send(new ListUsersInGroupCommand({ UserPoolId: poolId(), GroupName: 'Admins', NextToken: t }));
-    return { items: r.Users ?? [], next: r.NextToken };
-  });
-  if (admins.some((u) => u.Attributes?.find((a) => a.Name === 'sub')?.Value === target.userId)) {
-    throw new UserError(`You can't ${what} another admin.`);
-  }
+  if ((await groupSubs('Admins')).has(target.userId)) throw new UserError(`You can't ${what} another admin.`);
 }
 
 export async function resetUserPassword(ctx: Ctx, args: { userId: string }) {
@@ -213,7 +229,7 @@ export async function resetUserPassword(ctx: Ctx, args: { userId: string }) {
   await cognito.send(
     new AdminSetUserPasswordCommand({ UserPoolId: poolId(), Username: row.email, Password: password, Permanent: false })
   );
-  return { user: toUser(row, false), temporaryPassword: password };
+  return { user: toUser(row, (await rolesBySub())(row.userId)), temporaryPassword: password };
 }
 
 export async function setUserEnabled(ctx: Ctx, args: { userId: string; enabled: boolean }) {
@@ -227,22 +243,31 @@ export async function setUserEnabled(ctx: Ctx, args: { userId: string; enabled: 
     await cognito.send(new AdminDisableUserCommand({ UserPoolId: poolId(), Username: row.email }));
     await cognito.send(new AdminUserGlobalSignOutCommand({ UserPoolId: poolId(), Username: row.email }));
   }
-  return toUser(row, false, args.enabled);
+  return toUser(row, (await rolesBySub())(row.userId), args.enabled);
 }
 
-export async function setUserAdmin(ctx: Ctx, args: { userId: string; isAdmin: boolean }) {
+/**
+ * Admin only, one step at a time (guest ⇄ user ⇄ admin). The person is signed
+ * out so the new role (read from the sign-in token) applies at once.
+ */
+export async function setUserRole(ctx: Ctx, args: { userId: string; role: Role }) {
   requireAdmin(ctx);
-  if (args.userId === ctx.userId && !args.isAdmin) throw new UserError("You can't remove your own admin rights.");
+  const target = cleanRole(args.role);
+  if (args.userId === ctx.userId) throw new UserError("You can't change your own role.");
   const row = await userById(args.userId);
-  const params = { UserPoolId: poolId(), Username: row.email, GroupName: 'Admins' };
-  if (args.isAdmin) {
-    await cognito.send(new AdminAddUserToGroupCommand(params));
-    await ensureInbox(row.userId);
-  } else {
-    await cognito.send(new AdminRemoveUserFromGroupCommand(params));
+  const current = (await rolesBySub())(row.userId);
+  if (current === target) return toUser(row, current);
+  if (!isAllowedRoleChange(current, target)) {
+    throw new UserError('Change a role one step at a time: guest ⇄ user ⇄ admin.');
   }
-  // Takes effect at their next sign-in (the group is read from the token).
-  return toUser(row, args.isAdmin);
+  const Username = row.email;
+  const newGroup = GROUP_FOR[target];
+  const oldGroup = GROUP_FOR[current];
+  if (newGroup) await cognito.send(new AdminAddUserToGroupCommand({ UserPoolId: poolId(), Username, GroupName: newGroup }));
+  if (oldGroup) await cognito.send(new AdminRemoveUserFromGroupCommand({ UserPoolId: poolId(), Username, GroupName: oldGroup }));
+  if (target !== 'GUEST') await ensureInbox(row.userId);
+  await cognito.send(new AdminUserGlobalSignOutCommand({ UserPoolId: poolId(), Username }));
+  return toUser(row, target);
 }
 
 export async function findUserByEmail(email: string): Promise<UserRow | undefined> {

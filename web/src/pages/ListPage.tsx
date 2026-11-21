@@ -28,7 +28,7 @@ export function ListPage() {
       }
       return n;
     });
-  const isAdmin = !!useAuth().user?.isAdmin;
+  const canWork = !!useAuth().user?.canWork;
   const list = lists.find((l) => l.listId === listId);
 
   const { data: items, setData: setItems, error, setError, loading } = useLoad(() => api.listItems(listId), listId);
@@ -50,7 +50,7 @@ export function ListPage() {
   if (!list) return <Navigate to="/" replace />;
 
   const replace = (updated: Item | null, old: Item) =>
-    setItems((cur) => (cur ? (updated ? cur.map((i) => (i.itemId === old.itemId ? updated : i)) : cur.filter((i) => i.itemId !== old.itemId)) : cur));
+    setItems((cur) => (cur ? (updated && updated.listId === listId ? cur.map((i) => (i.itemId === old.itemId ? updated : i)) : cur.filter((i) => i.itemId !== old.itemId)) : cur));
 
   async function add(e: React.FormEvent) {
     e.preventDefault();
@@ -72,7 +72,7 @@ export function ListPage() {
   const open = sortItems((items ?? []).filter((i) => i.status === 'OPEN'), sort);
   const done = sortItems((items ?? []).filter((i) => i.status === 'DONE'), sort);
   const selected = (items ?? []).find((i) => i.itemId === openItemId) ?? null;
-  const canSettings = !list.isInbox && isAdmin;
+  const canSettings = !list.isInbox && canWork;
 
   const row = (i: Item) => (
     <ItemRow

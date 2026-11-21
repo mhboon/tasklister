@@ -1,6 +1,6 @@
 import { PutCommand, DeleteCommand, GetCommand } from '@aws-sdk/lib-dynamodb';
 import { ddb, tables, newId, nowIso, batchGet, TIME_ZONE, UserError } from '../../shared/db';
-import { requireAdmin, requireMember } from '../../shared/access';
+import { requireUser, requireMember } from '../../shared/access';
 import { materialize, allRecurringFor, type RecurringRow } from '../../shared/recurring-run';
 import { nextOccurrence, maxDate, todayIn, validateSchedule, type Schedule } from '../../shared/schedule';
 import { compareText } from '../../shared/text';
@@ -74,20 +74,20 @@ async function build(ctx: Ctx, recurringId: string, input: Input, createdAt: str
 }
 
 export async function listRecurring(ctx: Ctx) {
-  requireAdmin(ctx);
+  requireUser(ctx);
   const rows = await allRecurringFor(ctx.userId);
   const names = await listNamesFor(rows.map((r) => r.targetListId));
   return rows.sort((a, b) => compareText(a.title, b.title)).map((r) => dto(r, names));
 }
 
 export async function createRecurring(ctx: Ctx, args: { input: Input }) {
-  requireAdmin(ctx);
+  requireUser(ctx);
   const row = await build(ctx, newId(), args.input, nowIso());
   return dto(row, await listNamesFor([row.targetListId]));
 }
 
 export async function updateRecurring(ctx: Ctx, args: { recurringId: string; input: Input }) {
-  requireAdmin(ctx);
+  requireUser(ctx);
   const existing = (
     await ddb.send(new GetCommand({ TableName: tables.recurring, Key: { ownerId: ctx.userId, recurringId: args.recurringId } }))
   ).Item as RecurringRow | undefined;
@@ -97,7 +97,7 @@ export async function updateRecurring(ctx: Ctx, args: { recurringId: string; inp
 }
 
 export async function deleteRecurring(ctx: Ctx, args: { recurringId: string }) {
-  requireAdmin(ctx);
+  requireUser(ctx);
   await ddb.send(new DeleteCommand({ TableName: tables.recurring, Key: { ownerId: ctx.userId, recurringId: args.recurringId } }));
   return true;
 }

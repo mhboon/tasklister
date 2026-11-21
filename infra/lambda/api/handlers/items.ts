@@ -1,6 +1,6 @@
 import { PutCommand, UpdateCommand } from '@aws-sdk/lib-dynamodb';
 import { ddb, tables, newId, nowIso, batchDelete, UserError } from '../../shared/db';
-import { requireAdmin, requireMember, listItemRows } from '../../shared/access';
+import { requireUser, requireMember, listItemRows, getList } from '../../shared/access';
 import { compareText } from '../../shared/text';
 import { assembleItems, getItemDto, getItemRow, putItem } from '../../shared/items';
 import { cleanName, cleanDate, cleanCriticality, cleanNotes } from '../../shared/validate';
@@ -130,8 +130,33 @@ export async function setItemStatus(ctx: Ctx, args: { listId: string; itemId: st
   return getItemDto(args.listId, args.itemId);
 }
 
+/**
+ * Moves an item and its subitems to another list the caller belongs to.
+ * Copy first, then delete, so a failure part-way never loses the item.
+ * A recurrence only watches its own target list, so a moved item is no longer
+ * part of the recurrence.
+ */
+export async function moveItem(ctx: Ctx, args: { listId: string; itemId: string; targetListId: string }) {
+  requireUser(ctx);
+  await requireMember(ctx, args.listId);
+  await requireMember(ctx, args.targetListId);
+  const target = await getList(args.targetListId);
+  if (!target) throw new UserError('List not found.');
+  await requireItem(args.listId, args.itemId);
+  if (args.targetListId === args.listId) return getItemDto(args.listId, args.itemId, target.name);
+
+  const rows = (await listItemRows(args.listId)).filter((r) => r.itemId === args.itemId || r.parentId === args.itemId);
+  for (const r of rows) {
+    const { recurringId: _drop, ...rest } = r;
+    void _drop;
+    await ddb.send(new PutCommand({ TableName: tables.items, Item: { ...rest, listId: args.targetListId } }));
+  }
+  await batchDelete(tables.items, rows.map((r) => ({ listId: r.listId, itemId: r.itemId })));
+  return getItemDto(args.targetListId, args.itemId, target.name);
+}
+
 export async function deleteItem(ctx: Ctx, args: { listId: string; itemId: string }) {
-  requireAdmin(ctx);
+  requireUser(ctx);
   await requireMember(ctx, args.listId);
   await requireItem(args.listId, args.itemId);
   const rows = (await listItemRows(args.listId)).filter((r) => r.itemId === args.itemId || r.parentId === args.itemId);
@@ -167,7 +192,7 @@ export async function setSubitemStatus(
 }
 
 export async function deleteSubitem(ctx: Ctx, args: { listId: string; itemId: string; subitemId: string }) {
-  requireAdmin(ctx);
+  requireUser(ctx);
   await requireMember(ctx, args.listId);
   await batchDelete(tables.items, [{ listId: args.listId, itemId: `${args.itemId}#${args.subitemId}` }]);
   return getItemDto(args.listId, args.itemId);
