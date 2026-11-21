@@ -5,6 +5,12 @@ import { resolveMail, takeMailAllowance } from '../shared/mail-resolve';
 type Disposition = { disposition: 'CONTINUE' | 'STOP_RULE_SET' };
 const STOP: Disposition = { disposition: 'STOP_RULE_SET' };
 
+/** One line per mail: the decision and a reason code, never addresses or content. */
+function decide(d: Disposition, reason: string): Disposition {
+  console.log(JSON.stringify({ mailGate: d.disposition === 'CONTINUE' ? 'accept' : 'drop', reason }));
+  return d;
+}
+
 /**
  * Runs first, while SES holds the mail, and decides whether anything is
  * kept. Stopping the rule set drops the mail with no bounce and no reply,
@@ -14,12 +20,14 @@ export async function handler(event: SESEvent): Promise<Disposition> {
   try {
     const message = event.Records[0].ses;
     const domain = process.env.MAIL_DOMAIN;
-    if (!domain || !isAuthentic(message.receipt)) return STOP;
+    if (!domain) return decide(STOP, 'no-domain-config');
+    if (!isAuthentic(message.receipt)) return decide(STOP, 'not-authentic');
     const target = await resolveMail(message, domain);
-    if (!target || !(await takeMailAllowance(target.userId))) return STOP;
-    return { disposition: 'CONTINUE' };
+    if (!target) return decide(STOP, 'no-target');
+    if (!(await takeMailAllowance(target.userId))) return decide(STOP, 'rate-limited');
+    return decide({ disposition: 'CONTINUE' }, 'ok');
   } catch (e) {
     console.error('mail gate', e); // fail closed, and quietly
-    return STOP;
+    return decide(STOP, 'error');
   }
 }

@@ -10,6 +10,7 @@ const PATHS = {
       <path d="M17 14c2.8 0 4.5 1.9 4.5 4.5" />
     </>
   ),
+  refresh: <path d="M20 12a8 8 0 1 1-2.5-5.8M20 4v5h-5" />,
   exit: <path d="M10 4H5v16h5M14 8l4 4-4 4M18 12H9" />,
   pause: <path d="M8 5v14M16 5v14" />,
   play: <path d="M7 4l12 8-12 8z" />,

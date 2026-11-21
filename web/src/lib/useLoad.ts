@@ -1,7 +1,9 @@
 import { useCallback, useEffect, useRef, useState } from 'react';
+import { useRefreshEpoch } from './AppData';
 
 /**
- * Loads data on mount and whenever `key` changes. `reload` re-fetches,
+ * Loads data on mount and whenever `key` changes, and quietly re-fetches when
+ * the app asks for everything to be refreshed. `reload` re-fetches,
  * `setData` patches the loaded data locally after a mutation.
  */
 export function useLoad<T>(fetcher: () => Promise<T>, key = '') {
@@ -29,6 +31,14 @@ export function useLoad<T>(fetcher: () => Promise<T>, key = '') {
     setData(null);
     reload();
   }, [reload, key]);
+
+  const epoch = useRefreshEpoch();
+  const seenEpoch = useRef(epoch);
+  useEffect(() => {
+    if (seenEpoch.current === epoch) return;
+    seenEpoch.current = epoch;
+    reload(); // keeps the current data on screen meanwhile
+  }, [epoch, reload]);
 
   return { data, setData, error, setError, loading, reload };
 }
