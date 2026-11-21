@@ -33,8 +33,11 @@ A personal/family to-do app for browser (laptop and phone). Served at
   Folders are sorted alphabetically too and shown below the top-level lists.
   All alphabetical sorting is case-insensitive.
 - Each list shows its number of **open items** (not the number of shares).
-- In a list view, a settings (⚙) button holds rename, share, move to folder
-  and delete/leave. Sharing picks from registered users.
+- In a list view, a settings (⚙) button opens a screen with only the list's
+  settings (rename, share, move to folder, delete/leave); the items are not
+  shown next to it. Sharing picks from registered users.
+- A shared list (one you share or that is shared with you) shows a
+  multi-people icon next to its name in the navigation.
 
 ## Items
 
@@ -43,11 +46,16 @@ A personal/family to-do app for browser (laptop and phone). Served at
 - An item can have **subitems**, each open or completed. Subitems have only a
   title and status.
 - Removing an item asks for confirmation and takes its subitems with it.
+- A new item is created from a title alone (one line, a + button). Date,
+  priority, notes and subitems are set by opening the item: beside the list
+  on a wide screen, as a screen of its own on a phone. Users work the same way.
 - URLs in an item's title are clickable and open in a new tab.
 - Item delete is a trash icon, shown only when the item is opened.
 - Open items are sorted per list: Inbox newest first, other lists A–Z. The
-  user can switch to A–Z/Z–A, newest/oldest, priority or due date; the choice
-  is remembered per user (in the browser). Completed ones are collapsed below.
+  user can switch to A–Z/Z–A, newest/oldest, priority (high → low → none) or
+  due date (oldest → newest → none); the reverse option is the exact reverse,
+  so items without a priority or date come first. The choice is remembered
+  per user (in the browser). Completed ones are collapsed below.
 
 ## Recurring items
 

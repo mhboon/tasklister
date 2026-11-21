@@ -85,6 +85,7 @@ input[type='checkbox'] { width: 22px; height: 22px; min-height: 0; flex: none; a
 .nav-list a.active { background: var(--accent); color: var(--accent-text); }
 .nav-name { flex: 1; overflow: hidden; text-overflow: ellipsis; white-space: nowrap; }
 .nav-note { font-size: .75rem; opacity: .75; }
+.nav-shared { flex: none; opacity: .75; }
 .nav-count { font-size: .75rem; min-width: 1.4rem; text-align: center; padding: 0 .4rem; border-radius: 999px; background: var(--bg); color: var(--muted); border: 1px solid var(--border); }
 .nav-list a.active .nav-count { background: transparent; color: inherit; border-color: currentColor; }
 .nav-section { display: flex; align-items: center; padding: .6rem .8rem 0; }
@@ -95,6 +96,16 @@ input[type='checkbox'] { width: 22px; height: 22px; min-height: 0; flex: none; a
 .folder-toggle { flex: 1; text-align: left; background: none; border: none; font-weight: 600; padding: .4rem .8rem; min-height: 40px; overflow: hidden; text-overflow: ellipsis; white-space: nowrap; }
 .nav-footer { margin-top: auto; border-top: 1px solid var(--border); padding-top: .5rem; }
 .content { padding: 1.5rem 2rem 4rem; min-width: 0; }
+/* List (or settings) on the left, the opened item or user on the right. */
+.split { display: grid; grid-template-columns: minmax(0, 1fr); gap: 1.5rem; align-items: start; max-width: 760px; margin: 0 auto; }
+.split.has-detail { grid-template-columns: minmax(0, 1fr) minmax(320px, 400px); max-width: 1200px; }
+.split .page { max-width: none; margin: 0; }
+.detail-pane { display: flex; flex-direction: column; gap: .8rem; position: sticky; top: 1rem; max-height: calc(100vh - 2rem); overflow-y: auto; }
+.detail-head { display: flex; align-items: center; }
+.back-btn { background: none; border: none; color: var(--accent); padding: .4rem 0; min-height: 40px; }
+.item.selected { border-color: var(--accent); }
+.detail-pane .edit-grid { grid-template-columns: 1fr; }
+.detail-pane .item-detail { border: 1px solid var(--border); border-radius: var(--radius); background: var(--surface); padding: .8rem; }
 .page { max-width: 760px; margin: 0 auto; display: flex; flex-direction: column; gap: .8rem; }
 .page.narrow { max-width: 480px; }
 .page-head { display: flex; justify-content: space-between; align-items: center; gap: .8rem; flex-wrap: wrap; }
@@ -110,7 +121,8 @@ input[type='checkbox'] { width: 22px; height: 22px; min-height: 0; flex: none; a
 .field.inline > span { flex: none; }
 .row { display: flex; gap: .7rem; }
 .check { display: flex; gap: .5rem; align-items: center; }
-.add-form { display: grid; grid-template-columns: 1fr 150px 130px auto; gap: .5rem; }
+.add-form { display: flex; gap: .5rem; }
+.icon-submit { flex: none; width: 44px; padding: 0; font-size: 1.4rem; line-height: 1; }
 .inline-form { display: flex; gap: .5rem; }
 code.password { font-size: 1.1rem; background: var(--bg); padding: .3rem .5rem; border-radius: 6px; user-select: all; }
 
@@ -145,7 +157,7 @@ textarea {
 .badge.crit-MEDIUM { color: var(--medium); border-color: var(--medium); }
 .badge.crit-LOW { color: var(--low); border-color: var(--low); }
 .badge.list-badge { background: var(--bg); }
-.item-detail { border-top: 1px solid var(--border); padding: .7rem .8rem .8rem 2.6rem; display: flex; flex-direction: column; gap: .7rem; }
+.item-detail { padding: .7rem .8rem .8rem; display: flex; flex-direction: column; gap: .7rem; }
 .subitems { list-style: none; margin: 0; padding: 0; display: flex; flex-direction: column; gap: .2rem; }
 .subitems li { display: flex; align-items: center; gap: .6rem; }
 .sub-title { flex: 1; overflow-wrap: anywhere; }
@@ -184,11 +196,11 @@ dialog.dialog h2 { font-size: 1.15rem; }
   .sidebar.open { transform: none; box-shadow: 0 0 30px rgba(0, 0, 0, .35); }
   .scrim { display: block; position: fixed; inset: 0; background: rgba(0, 0, 0, .4); z-index: 10; }
   .content { padding: 1rem 1rem 5rem; }
-  .add-form { grid-template-columns: 1fr 1fr; }
-  .add-form input:first-child { grid-column: 1 / -1; }
-  .add-form button { grid-column: 1 / -1; }
+  /* A phone shows the opened item or user as a screen of its own. */
+  .split.has-detail { grid-template-columns: minmax(0, 1fr); }
+  .split.has-detail > .master { display: none; }
+  .detail-pane { position: static; max-height: none; overflow: visible; }
   .edit-grid { grid-template-columns: 1fr; }
-  .item-detail { padding-left: 1rem; }
   .row { flex-direction: column; }
   .user-actions { width: 100%; }
   .user-actions button { flex: 1 1 auto; }
