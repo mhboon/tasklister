@@ -229,6 +229,16 @@ dialog.dialog h2 { font-size: 1.15rem; }
 .mail-address { overflow-wrap: anywhere; background: var(--bg); padding: .15rem .4rem; border-radius: 6px; }
 .mail-domain { align-self: center; color: var(--muted); overflow-wrap: anywhere; }
 
+/* ---------- voice ---------- */
+.mic-btn.listening { color: var(--danger); animation: listening 1.2s ease-in-out infinite; }
+@keyframes listening { 50% { opacity: .45; } }
+@media (prefers-reduced-motion: reduce) { .mic-btn.listening { animation: none; } }
+
+/* ---------- extra sender addresses ---------- */
+.sender-list { list-style: none; margin: 0; padding: 0; display: flex; flex-direction: column; gap: .6rem; }
+.sender-list li { display: flex; align-items: flex-start; gap: .5rem; }
+.sender-info { flex: 1; min-width: 0; overflow-wrap: anywhere; }
+
 /* ---------- never wider than the screen (iPhone) ---------- */
 html { -webkit-text-size-adjust: 100%; }
 input, select, textarea { max-width: 100%; min-width: 0; }

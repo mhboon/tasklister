@@ -59,6 +59,11 @@ export class TasklisterBackendStack extends Stack {
     const recurringTable = table('RecurringTable', 'TasklisterRecurring', 'ownerId', 'recurringId');
     // Routes list email addresses to lists, and counts mails per sender per hour.
     const mailboxesTable = table('MailboxesTable', 'TasklisterMailboxes', 'name');
+    // Extra sender addresses and pending claims belong to a user; list addresses have no userId, so they stay out.
+    mailboxesTable.addGlobalSecondaryIndex({
+      indexName: 'byUser',
+      partitionKey: { name: 'userId', type: dynamodb.AttributeType.STRING },
+    });
     const cfnMailboxes = mailboxesTable.node.defaultChild as dynamodb.CfnTable;
     cfnMailboxes.timeToLiveSpecification = { attributeName: 'expiresAt', enabled: true };
     this.tables = { users: usersTable, lists: listsTable, members: membersTable, items: itemsTable, mailboxes: mailboxesTable };
@@ -151,12 +156,12 @@ export class TasklisterBackendStack extends Stack {
     const fields: Record<string, string[]> = {
       Query: [
         'me', 'listUsers', 'listFolders', 'listLists', 'listMembers', 'listItems',
-        'listAgenda', 'listPriority', 'listRecurring', 'linkPreview', 'mailDomain',
+        'listAgenda', 'listPriority', 'listRecurring', 'linkPreview', 'mailDomain', 'listSenderAddresses',
       ],
       Mutation: [
         'createUser', 'resetUserPassword', 'setUserEnabled', 'setUserRole',
         'createFolder', 'renameFolder', 'deleteFolder',
-        'createList', 'renameList', 'deleteList', 'moveList', 'setListMailName', 'shareList', 'unshareList',
+        'createList', 'renameList', 'deleteList', 'moveList', 'setListMailName', 'addSenderAddress', 'removeSenderAddress', 'shareList', 'unshareList',
         'createItem', 'updateItem', 'setItemStatus', 'moveItem', 'deleteItem',
         'addSubitem', 'setSubitemStatus', 'deleteSubitem',
         'createRecurring', 'updateRecurring', 'deleteRecurring',

@@ -1,25 +1,22 @@
 import { CognitoIdentityProviderClient, AdminGetUserCommand } from '@aws-sdk/client-cognito-identity-provider';
 import { GetCommand, UpdateCommand } from '@aws-sdk/lib-dynamodb';
 import type { SESMessage } from 'aws-lambda';
-import { ddb, tables, queryAll } from './db';
+import { ddb, tables } from './db';
 import { getMembership, inboxId } from './access';
 import { localPartAt, parseAddress } from './inbound';
 import { normalizeMailName } from './mailnames';
-import { normEmail } from './validate';
+import { findAlias, userByEmail, userById } from './senders';
 import type { MailboxRow, UserRow } from './types';
 
 const cognito = new CognitoIdentityProviderClient({});
 export const MAILS_PER_HOUR = 30;
 
-async function userByEmail(email: string): Promise<UserRow | undefined> {
-  const [row] = await queryAll<UserRow>({
-    TableName: tables.users,
-    IndexName: 'byEmail',
-    KeyConditionExpression: 'email = :e',
-    ExpressionAttributeValues: { ':e': normEmail(email) },
-    Limit: 1,
-  });
-  return row;
+/** The person a mail is from: the owner of that address, or of a verified extra sender address. */
+async function senderFor(email: string): Promise<UserRow | undefined> {
+  const primary = await userByEmail(email);
+  if (primary) return primary;
+  const alias = await findAlias(email);
+  return alias ? userById(alias.userId) : undefined;
 }
 
 /** A disabled account must not be able to add items by mail either. */
@@ -47,8 +44,9 @@ export async function resolveMail(message: SESMessage, domain: string): Promise<
   // DMARC is evaluated for the visible From address, so that is the identity we trust.
   const from = parseAddress(message.mail.commonHeaders?.from?.[0]);
   if (!from) return null;
-  const sender = await userByEmail(from);
-  if (!sender || !(await isEnabled(from))) return null;
+  const sender = await senderFor(from);
+  // The account's own (Cognito) address decides whether it is enabled, whatever address the mail came from.
+  if (!sender || !(await isEnabled(sender.email))) return null;
 
   const listIds = new Set<string>();
   for (const recipient of message.receipt.recipients) {

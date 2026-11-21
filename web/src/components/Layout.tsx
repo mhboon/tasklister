@@ -98,7 +98,6 @@ export function Layout() {
           {inbox && listLink(inbox)}
           <li><NavLink to="/agenda" onClick={close}>Agenda</NavLink></li>
           <li><NavLink to="/priority" onClick={close}>Priority</NavLink></li>
-          {canWork && <li><NavLink to="/recurring" onClick={close}>Recurring</NavLink></li>}
         </ul>
 
         <div className="nav-section">
@@ -147,6 +146,7 @@ export function Layout() {
         </ul>
 
         <ul className="nav-list nav-footer">
+          {canWork && <li><NavLink to="/recurring" onClick={close}>Recurring</NavLink></li>}
           {user?.isAdmin && <li><NavLink to="/users" onClick={close}>Users</NavLink></li>}
           <li><NavLink to="/account" onClick={close}>Account</NavLink></li>
           <li><button type="button" className="link-btn" onClick={logout}>Sign out</button></li>

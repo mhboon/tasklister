@@ -7,6 +7,7 @@ import * as lists from './handlers/lists';
 import * as items from './handlers/items';
 import * as recurring from './handlers/recurring';
 import * as preview from './handlers/preview';
+import * as senders from './handlers/senders';
 
 type Handler = (ctx: Ctx, args: never) => Promise<unknown>;
 
@@ -48,6 +49,9 @@ const handlers: Record<string, Handler> = {
   deleteSubitem: items.deleteSubitem,
 
   linkPreview: preview.linkPreview,
+  listSenderAddresses: senders.listSenderAddresses,
+  addSenderAddress: senders.addSenderAddress,
+  removeSenderAddress: senders.removeSenderAddress,
   mailDomain: async () => process.env.MAIL_DOMAIN ?? null,
 
   listRecurring: recurring.listRecurring,

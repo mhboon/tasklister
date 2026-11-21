@@ -10,6 +10,8 @@ import { ConfirmDialog } from '../components/ConfirmDialog';
 import { PromptDialog } from '../components/PromptDialog';
 import { Icon } from '../components/Icon';
 import { SortSelect } from '../components/SortSelect';
+import { useSpeech } from '../lib/useSpeech';
+import { truncateAtWord, VOICE_TITLE_MAX } from '../lib/words';
 import { compareText, loadSort, saveSort, sortItems, type SortKey } from '../lib/sort';
 
 export function ListPage() {
@@ -35,6 +37,16 @@ export function ListPage() {
   const { data: items, setData: setItems, error, setError, loading } = useLoad(() => api.listItems(listId), listId);
   const [title, setTitle] = useState('');
   const [adding, setAdding] = useState(false);
+  // What was dictated, kept whole for the notes when the title had to be cut.
+  const [spoken, setSpoken] = useState<string | null>(null);
+  const speech = useSpeech(
+    (text) => {
+      const clean = text.replace(/\s+/g, ' ').trim();
+      setTitle(truncateAtWord(clean));
+      setSpoken(clean.length > VOICE_TITLE_MAX ? clean : null);
+    },
+    (message) => setError(message)
+  );
   const [renaming, setRenaming] = useState(false);
   const [confirm, setConfirm] = useState<'delete' | 'leave' | null>(null);
   const [sharing, setSharing] = useState(false);
@@ -59,9 +71,10 @@ export function ListPage() {
     if (!t) return;
     setAdding(true);
     try {
-      const created = await api.createItem(listId, t);
+      const created = await api.createItem(listId, t, null, null, spoken);
       setItems((cur) => [...(cur ?? []), created]);
       setTitle('');
+      setSpoken(null);
       setError(null);
     } catch (err) {
       setError((err as Error).message);
@@ -201,6 +214,18 @@ export function ListPage() {
 
         <form className="add-form" onSubmit={add}>
           <input placeholder="Add an item…" value={title} maxLength={200} onChange={(e) => setTitle(e.target.value)} aria-label="New item title" />
+          {speech.supported && (
+            <button
+              type="button"
+              className={`icon-btn mic-btn${speech.listening ? ' listening' : ''}`}
+              aria-label={speech.listening ? 'Stop listening' : 'Add by voice'}
+              title={speech.listening ? 'Stop listening' : 'Add by voice'}
+              aria-pressed={speech.listening}
+              onClick={speech.listening ? speech.stop : speech.start}
+            >
+              <Icon name="mic" />
+            </button>
+          )}
           <button type="submit" className="primary icon-submit" aria-label="Add item" title="Add item" disabled={adding || !title.trim()}>＋</button>
         </form>
 

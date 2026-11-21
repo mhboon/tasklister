@@ -30,9 +30,11 @@ hosted zone ID, zone name and site domain come from `HOSTED_ZONE_ID`,
 SES receives all mail for the site domain (MX record) in one receipt rule with
 three actions, in order:
 
-1. **`GateFn`** (synchronous). Decides before anything is stored. It reads the visible From
+1. **`GateFn`** (synchronous). Decides before anything is stored. First, if the subject quotes a
+   claim code (`TL-XXXXXX`) and the From address matches the pending claim, that address becomes a
+   verified extra sender (alias) of the person who asked, and the mail is used up. Otherwise it reads the visible From
    address, requires DMARC pass and clean spam/virus verdicts, finds the sender (a registered,
-   enabled user), resolves each recipient (`me@` → the sender's Inbox, `<name>@` → the list in
+   enabled user, or the owner of a verified extra sender address), resolves each recipient (`me@` → the sender's Inbox, `<name>@` → the list in
    `TasklisterMailboxes`, only if the sender is a member) and counts the sender's mails per hour.
    Anything that fails returns `STOP_RULE_SET`: the mail is dropped, never bounced, so nobody can
    tell which check failed. SES accepts the whole domain for exactly this reason.
@@ -54,7 +56,7 @@ SES allows one active receipt rule set per region and account, so the stack acti
 | `TasklisterListMembers` | `userId` / `listId` | `role` OWNER\|MEMBER, **`folderId`** (this user's folder for the list). GSI `byList` for members of a list. This row is the access check for everything |
 | `TasklisterItems` | `listId` / `itemId` | an item, or a subitem as `itemId#subitemId` with `parentId`. One Query returns a list's items with their subitems |
 | `TasklisterRecurring` | `ownerId` / `recurringId` | schedule, target list, `nextDue`, `active` |
-| `TasklisterMailboxes` | `name` | list address name → `listId` (the claim is a conditional write, so names are unique). Also `rate#<userId>#<hour>` counters, expired by TTL (`expiresAt`) |
+| `TasklisterMailboxes` | `name` | list address name → `listId` (the claim is a conditional write, so names are unique). Also `rate#<userId>#<hour>` counters, `alias#<email>` verified extra sender addresses and `claim#<code>` pending claims (expired by TTL `expiresAt`). GSI `byUser` lists a person's addresses and claims; list address rows have no `userId`, so the index is sparse |
 
 Ids are time-sortable (`base36 time + random`), so key order is creation order.
 All tables: pay-per-request, `RETAIN`, point-in-time recovery.
