@@ -229,6 +229,12 @@ dialog.dialog h2 { font-size: 1.15rem; }
 .mail-address { overflow-wrap: anywhere; background: var(--bg); padding: .15rem .4rem; border-radius: 6px; }
 .mail-domain { align-self: center; color: var(--muted); overflow-wrap: anywhere; }
 
+/* ---------- item details, folder dialog ---------- */
+.title-row { display: flex; align-items: center; gap: .7rem; }
+.title-row .detail-title { flex: 1; }
+.created { margin: 0; }
+.dialog-danger { margin-right: auto; display: inline-flex; align-items: center; gap: .3rem; }
+
 /* ---------- voice ---------- */
 .mic-btn.listening { color: var(--danger); animation: listening 1.2s ease-in-out infinite; }
 @keyframes listening { 50% { opacity: .45; } }

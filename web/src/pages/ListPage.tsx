@@ -223,7 +223,7 @@ export function ListPage() {
               aria-pressed={speech.listening}
               onClick={speech.listening ? speech.stop : speech.start}
             >
-              <Icon name="mic" />
+              <Icon name={speech.listening ? 'stop' : 'mic'} />
             </button>
           )}
           <button type="submit" className="primary icon-submit" aria-label="Add item" title="Add item" disabled={adding || !title.trim()}>＋</button>

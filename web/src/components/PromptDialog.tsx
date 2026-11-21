@@ -1,4 +1,5 @@
 import { useEffect, useRef, useState } from 'react';
+import { Icon } from './Icon';
 
 export interface PromptDialogProps {
   open: boolean;
@@ -8,9 +9,11 @@ export interface PromptDialogProps {
   confirmLabel?: string;
   onSubmit: (value: string) => Promise<void> | void;
   onCancel: () => void;
+  /** A separate, risky action offered inside the dialog (e.g. delete); it should ask for confirmation itself. */
+  dangerAction?: { label: string; onClick: () => void };
 }
 
-export function PromptDialog({ open, title, label, initial = '', confirmLabel = 'Save', onSubmit, onCancel }: PromptDialogProps) {
+export function PromptDialog({ open, title, label, initial = '', confirmLabel = 'Save', onSubmit, onCancel, dangerAction }: PromptDialogProps) {
   const ref = useRef<HTMLDialogElement>(null);
   const [value, setValue] = useState(initial);
   const [busy, setBusy] = useState(false);
@@ -59,6 +62,11 @@ export function PromptDialog({ open, title, label, initial = '', confirmLabel = 
         </label>
         {error && <p className="error">{error}</p>}
         <div className="dialog-actions">
+          {dangerAction && (
+            <button type="button" className="danger dialog-danger" onClick={dangerAction.onClick} disabled={busy}>
+              <Icon name="trash" size={16} /> {dangerAction.label}
+            </button>
+          )}
           <button type="button" onClick={onCancel} disabled={busy}>Cancel</button>
           <button type="submit" className="primary" disabled={busy || !value.trim()}>
             {busy ? 'Saving…' : confirmLabel}

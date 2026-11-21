@@ -8,6 +8,11 @@ import { useAppData } from '../lib/AppData';
 import { relativeLabel } from '../lib/dates';
 import { compareText } from '../lib/sort';
 
+/** e.g. "21 Nov 2026, 14:09", in the viewer's own time zone. */
+function formatCreated(iso: string): string {
+  return new Date(iso).toLocaleString(undefined, { day: 'numeric', month: 'short', year: 'numeric', hour: '2-digit', minute: '2-digit' });
+}
+
 interface Props {
   item: Item;
   /** Called with the updated item (or null when it was deleted). */
@@ -53,18 +58,28 @@ export function ItemDetail({ item, onChange, onError, onClose }: Props) {
         <button type="button" className="back-btn" aria-label="Back" title="Back" onClick={onClose}>←</button>
       </div>
       <div className="item-detail">
-        <input
-          className="detail-title"
-          aria-label="Title"
-          value={title}
-          maxLength={200}
-          onChange={(e) => setTitle(e.target.value)}
-          onBlur={() => {
-            const t = title.trim();
-            if (t && t !== item.title) run(() => api.updateItem(item.listId, item.itemId, { title: t }), onChange);
-            else setTitle(item.title);
-          }}
-        />
+        <div className="title-row">
+          <input
+            type="checkbox"
+            aria-label={item.status === 'DONE' ? 'Mark as not completed' : 'Mark as completed'}
+            title={item.status === 'DONE' ? 'Mark as not completed' : 'Mark as completed'}
+            checked={item.status === 'DONE'}
+            disabled={busy}
+            onChange={() => run(() => api.setItemStatus(item.listId, item.itemId, item.status === 'DONE' ? 'OPEN' : 'DONE'), onChange)}
+          />
+          <input
+            className="detail-title"
+            aria-label="Title"
+            value={title}
+            maxLength={200}
+            onChange={(e) => setTitle(e.target.value)}
+            onBlur={() => {
+              const t = title.trim();
+              if (t && t !== item.title) run(() => api.updateItem(item.listId, item.itemId, { title: t }), onChange);
+              else setTitle(item.title);
+            }}
+          />
+        </div>
 
         <label className="field">
           <select
@@ -232,6 +247,8 @@ export function ItemDetail({ item, onChange, onError, onClose }: Props) {
             </div>
           )}
         </div>
+
+        <p className="created muted small">Created {formatCreated(item.createdAt)}</p>
 
         {canWork && (
           <button type="button" className="icon-btn delete-btn" aria-label="Delete item" title="Delete item" onClick={() => setConfirmDelete(true)}>
