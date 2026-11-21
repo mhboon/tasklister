@@ -111,11 +111,19 @@ export class TasklisterMailStack extends Stack {
     });
     activation.node.addDependency(ruleSet);
 
-    // Mail for the domain is delivered to SES in this region.
     const zone = route53.HostedZone.fromHostedZoneAttributes(this, 'Zone', {
       hostedZoneId: props.hostedZoneId,
       zoneName: props.zoneName,
     });
+
+    // SES only accepts mail for a domain that is a verified identity here;
+    // without one it answers every sender "550 5.1.1 mailbox unavailable"
+    // before any rule runs. The verification and DKIM records go into the zone.
+    new ses.EmailIdentity(this, 'DomainIdentity', {
+      identity: ses.Identity.publicHostedZone(zone),
+    });
+
+    // Mail for the domain is delivered to SES in this region.
     new route53.MxRecord(this, 'Mx', {
       zone,
       recordName: mailDomain,
