@@ -1,0 +1,25 @@
+# Weekly dependency PRs, grouped. They go through the same PR + required
+# checks as any change; minor/patch ones auto-merge when green (see
+# .github/workflows/dependabot-automerge.yml), major ones wait for a human.
+version: 2
+updates:
+  # npm workspaces: one root entry covers root, infra/ and web/ since the
+  # lockfile lives at the repo root.
+  - package-ecosystem: "npm"
+    directory: "/"
+    schedule:
+      interval: "weekly"
+    open-pull-requests-limit: 10
+    groups:
+      npm-dependencies:
+        patterns:
+          - "*"
+
+  - package-ecosystem: "github-actions"
+    directory: "/"
+    schedule:
+      interval: "weekly"
+    groups:
+      github-actions:
+        patterns:
+          - "*"
