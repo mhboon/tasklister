@@ -42,7 +42,7 @@ function optionalString(v: unknown): string | undefined {
 // One-time manual bootstrap only; see lib/github-oidc-stack.ts.
 const githubRepo = app.node.tryGetContext('githubRepo');
 if (githubRepo) {
-  new GithubOidcStack(app, 'GithubOidcStack', {
+  new GithubOidcStack(app, 'TasklisterGithubOidcStack', {
     env: { account, region },
     githubRepo,
     githubOwnerId: optionalString(app.node.tryGetContext('githubOwnerId')),

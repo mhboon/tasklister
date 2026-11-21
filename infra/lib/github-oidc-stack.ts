@@ -20,7 +20,7 @@ const GITHUB_ID_REGEX = /^[0-9]+$/;
  * account already has GitHub's (created for the popla repo). It is
  * therefore *referenced* here, not created; the role is this repo's own.
  *
- *   npx cdk deploy GithubOidcStack -c githubRepo=<owner>/tasklister \
+ *   npx cdk deploy TasklisterGithubOidcStack -c githubRepo=<owner>/tasklister \
  *     -c githubOwnerId=<id> -c githubRepoId=<id>
  *
  * Trust is an exact match on the token subject (main branch of this repo

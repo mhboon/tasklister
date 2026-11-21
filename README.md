@@ -55,7 +55,7 @@ Uses whatever AWS credentials are active (`aws login`). Region `eu-west-1`.
 
 ```bash
 cd infra
-npx cdk deploy GithubOidcStack -c githubRepo=<owner>/tasklister \
+npx cdk deploy TasklisterGithubOidcStack -c githubRepo=<owner>/tasklister \
   -c githubOwnerId=<id> -c githubRepoId=<id>
 ```
 Then in GitHub → Settings → Secrets and variables → Actions: secret
