@@ -64,7 +64,8 @@ A personal/family to-do app for browser (laptop and phone). Served at
   on a wide screen, as a screen of its own on a phone. Users work the same way.
 - An opened item shows, in this order: title, list (to move it), due date
   (clock button to pick, ✕ to clear), priority ("priority not set" when
-  empty), subitems (open ones A–Z, then completed ones A–Z), notes. Back is
+  empty), subitems (the add box above the list; open ones A–Z, then completed ones
+  A–Z), notes. List, due date and priority have no text labels. Back is
   an arrow only.
 - An item can be moved to another list you can access, from the opened item.
   It takes its subitems along and leaves any recurrence it came from.

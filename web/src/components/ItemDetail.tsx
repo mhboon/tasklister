@@ -65,8 +65,9 @@ export function ItemDetail({ item, onChange, onError, onClose }: Props) {
         />
 
         <label className="field">
-          <span>List</span>
           <select
+            aria-label="List"
+            title="List"
             value={item.listId}
             disabled={busy}
             onChange={(e) =>
@@ -83,9 +84,8 @@ export function ItemDetail({ item, onChange, onError, onClose }: Props) {
         </label>
 
         <div className="field">
-          <span>Due date</span>
           <div className="due-row">
-            <button type="button" className="due-btn" disabled={busy} onClick={() => dateRef.current?.showPicker?.()}>
+            <button type="button" className="due-btn" aria-label="Due date" title="Due date" disabled={busy} onClick={() => dateRef.current?.showPicker?.()}>
               <Icon name="clock" size={18} />
               <span>{item.dueDate ? relativeLabel(item.dueDate) : 'No due date'}</span>
             </button>
@@ -115,8 +115,9 @@ export function ItemDetail({ item, onChange, onError, onClose }: Props) {
         </div>
 
         <label className="field">
-          <span>Priority</span>
           <select
+            aria-label="Priority"
+            title="Priority"
             value={item.criticality ?? ''}
             onChange={(e) =>
               run(() => api.updateItem(item.listId, item.itemId, { criticality: (e.target.value || null) as Criticality | null }), onChange)
@@ -131,6 +132,21 @@ export function ItemDetail({ item, onChange, onError, onClose }: Props) {
 
         <div className="field">
           <span>Subitems</span>
+          <form
+            className="inline-form"
+            onSubmit={(e) => {
+              e.preventDefault();
+              const t = newSub.trim();
+              if (!t) return;
+              run(() => api.addSubitem(item.listId, item.itemId, t), (r) => {
+                setNewSub('');
+                onChange(r);
+              });
+            }}
+          >
+            <input placeholder="Add subitem" aria-label="New subitem" value={newSub} maxLength={200} onChange={(e) => setNewSub(e.target.value)} />
+            <button type="submit" className="icon-submit" aria-label="Add subitem" title="Add subitem" disabled={busy || !newSub.trim()}>＋</button>
+          </form>
           <ul className="subitems">
             {subitems.map((s) => (
               <li key={s.subitemId} className={s.status === 'DONE' ? 'done' : ''}>
@@ -156,21 +172,6 @@ export function ItemDetail({ item, onChange, onError, onClose }: Props) {
               </li>
             ))}
           </ul>
-          <form
-            className="inline-form"
-            onSubmit={(e) => {
-              e.preventDefault();
-              const t = newSub.trim();
-              if (!t) return;
-              run(() => api.addSubitem(item.listId, item.itemId, t), (r) => {
-                setNewSub('');
-                onChange(r);
-              });
-            }}
-          >
-            <input placeholder="Add subitem" aria-label="New subitem" value={newSub} maxLength={200} onChange={(e) => setNewSub(e.target.value)} />
-            <button type="submit" className="icon-submit" aria-label="Add subitem" title="Add subitem" disabled={busy || !newSub.trim()}>＋</button>
-          </form>
         </div>
 
         <label className="field">
