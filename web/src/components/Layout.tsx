@@ -4,6 +4,7 @@ import { useAuth } from '../lib/useAuth';
 import { useAppData } from '../lib/AppData';
 import { compareText } from '../lib/sort';
 import { api, type ListSummary } from '../lib/api';
+import { Icon } from './Icon';
 import { ConfirmDialog } from './ConfirmDialog';
 import { PromptDialog } from './PromptDialog';
 
@@ -33,13 +34,7 @@ export function Layout() {
       <NavLink to={`/lists/${l.listId}`} onClick={close} className={({ isActive }) => (isActive ? 'active' : '')}>
         <span className="nav-name">{l.name}</span>
         {(!l.isOwner || l.memberCount > 1) && (
-          <svg className="nav-shared" viewBox="0 0 24 24" width="16" height="16" role="img" aria-label={l.isOwner ? 'Shared with others' : `Shared by ${l.ownerName}`} fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round">
-            <title>{l.isOwner ? 'Shared with others' : `Shared by ${l.ownerName}`}</title>
-            <circle cx="9" cy="8" r="3.5" />
-            <path d="M2.5 20c0-3.6 2.9-6 6.5-6s6.5 2.4 6.5 6" />
-            <circle cx="17" cy="9" r="2.5" />
-            <path d="M17 14c2.8 0 4.5 1.9 4.5 4.5" />
-          </svg>
+          <span className="nav-shared" role="img" aria-label={l.isOwner ? 'Shared with others' : `Shared by ${l.ownerName}`} title={l.isOwner ? 'Shared with others' : `Shared by ${l.ownerName}`}><Icon name="people" size={16} /></span>
         )}
         <span className="nav-count" title="Open items">{l.openCount}</span>
       </NavLink>

@@ -77,6 +77,14 @@ A personal/family to-do app for browser (laptop and phone). Served at
   items without a priority or date come first). The choice is remembered
   per user (in the browser). Completed ones are collapsed below.
 
+## Look and feel
+
+- Everyday actions are icons with a hover/screen-reader label, one drawing per
+  meaning across the app (pencil = edit/rename, trash = delete, people =
+  share, + = add). In list settings the icons carry a short caption.
+- Words stay where an action is rare, risky or needs explaining: the Users and
+  Account pages, dialogs (Cancel, Create, Save, Delete…) and sign-in.
+
 ## Recurring items
 
 - A recurring item is its own thing: name, **schedule**, **target list**,

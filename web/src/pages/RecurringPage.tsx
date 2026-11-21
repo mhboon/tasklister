@@ -1,5 +1,6 @@
 import { useState } from 'react';
 import { compareText } from '../lib/sort';
+import { Icon } from '../components/Icon';
 import { api, type Criticality, type Frequency, type Recurring, type RecurringInput } from '../lib/api';
 import { useAppData } from '../lib/AppData';
 import { useLoad } from '../lib/useLoad';
@@ -37,7 +38,7 @@ export function RecurringPage() {
     <section className="page">
       <div className="page-head">
         <h1>Recurring</h1>
-        <div className="head-actions"><button type="button" className="primary" onClick={() => setEditing('new')}>New recurring item</button></div>
+        <div className="head-actions"><button type="button" className="primary icon-submit" aria-label="New recurring item" title="New recurring item" onClick={() => setEditing('new')}><Icon name="plus" /></button></div>
       </div>
       <p className="muted small">
         Each morning, a recurring item is added to its list if it is due and the previous one is not still open.
@@ -57,9 +58,11 @@ export function RecurringPage() {
                   {r.criticality ? ` · ${r.criticality.toLowerCase()}` : ''}
                 </div>
               </div>
-              <button type="button" onClick={() => toggleActive(r)}>{r.active ? 'Pause' : 'Resume'}</button>
-              <button type="button" onClick={() => setEditing(r)}>Edit</button>
-              <button type="button" className="danger" onClick={() => setDeleting(r)}>Delete</button>
+              <button type="button" className="icon-btn" aria-label={r.active ? 'Pause' : 'Resume'} title={r.active ? 'Pause' : 'Resume'} onClick={() => toggleActive(r)}>
+                <Icon name={r.active ? 'pause' : 'play'} />
+              </button>
+              <button type="button" className="icon-btn" aria-label="Edit" title="Edit" onClick={() => setEditing(r)}><Icon name="pencil" /></button>
+              <button type="button" className="icon-btn danger" aria-label="Delete" title="Delete" onClick={() => setDeleting(r)}><Icon name="trash" /></button>
             </div>
           </li>
         ))}

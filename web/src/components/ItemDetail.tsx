@@ -1,5 +1,6 @@
 import { useRef, useState } from 'react';
 import { api, type Criticality, type Item } from '../lib/api';
+import { Icon } from './Icon';
 import { ConfirmDialog } from './ConfirmDialog';
 import { useAuth } from '../lib/useAuth';
 import { useAppData } from '../lib/AppData';
@@ -85,10 +86,7 @@ export function ItemDetail({ item, onChange, onError, onClose }: Props) {
           <span>Due date</span>
           <div className="due-row">
             <button type="button" className="due-btn" disabled={busy} onClick={() => dateRef.current?.showPicker?.()}>
-              <svg viewBox="0 0 24 24" width="18" height="18" aria-hidden="true" fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round">
-                <circle cx="12" cy="12" r="9" />
-                <path d="M12 7v5l3 2" />
-              </svg>
+              <Icon name="clock" size={18} />
               <span>{item.dueDate ? relativeLabel(item.dueDate) : 'No due date'}</span>
             </button>
             {item.dueDate && (
@@ -191,9 +189,7 @@ export function ItemDetail({ item, onChange, onError, onClose }: Props) {
 
         {canWork && (
           <button type="button" className="icon-btn delete-btn" aria-label="Delete item" title="Delete item" onClick={() => setConfirmDelete(true)}>
-            <svg viewBox="0 0 24 24" width="20" height="20" aria-hidden="true" fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round">
-              <path d="M3 6h18M8 6V4h8v2M6 6l1 14h10l1-14M10 11v6M14 11v6" />
-            </svg>
+            <Icon name="trash" />
           </button>
         )}
       </div>
