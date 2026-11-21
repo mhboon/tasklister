@@ -12,14 +12,14 @@ export type SortKey =
   | 'due-asc' | 'due-desc';
 
 export const SORT_OPTIONS: { key: SortKey; label: string }[] = [
-  { key: 'alpha-asc', label: 'A → Z' },
-  { key: 'alpha-desc', label: 'Z → A' },
-  { key: 'created-desc', label: 'Newest first' },
-  { key: 'created-asc', label: 'Oldest first' },
-  { key: 'priority-asc', label: 'Priority: high → low' },
-  { key: 'priority-desc', label: 'Priority: low → high' },
-  { key: 'due-asc', label: 'Due: oldest → newest' },
-  { key: 'due-desc', label: 'Due: newest → oldest' },
+  { key: 'alpha-asc', label: 'AZ ↑' },
+  { key: 'alpha-desc', label: 'AZ ↓' },
+  { key: 'created-asc', label: 'Created ↑' },
+  { key: 'created-desc', label: 'Created ↓' },
+  { key: 'priority-asc', label: 'Priority ↑' },
+  { key: 'priority-desc', label: 'Priority ↓' },
+  { key: 'due-asc', label: 'Due ↑' },
+  { key: 'due-desc', label: 'Due ↓' },
 ];
 
 const RANK: Record<Criticality, number> = { HIGH: 0, MEDIUM: 1, LOW: 2 };

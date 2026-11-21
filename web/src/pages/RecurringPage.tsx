@@ -203,7 +203,7 @@ function RecurringForm({
         <label className="field"><span>Starting</span>
           <input type="date" value={startDate} onChange={(e) => setStart(e.target.value)} required />
         </label>
-        <label className="field"><span>Criticality</span>
+        <label className="field"><span>Priority</span>
           <select value={criticality} onChange={(e) => setCrit(e.target.value as Criticality | '')}>
             <option value="">None</option>
             <option value="HIGH">High</option>

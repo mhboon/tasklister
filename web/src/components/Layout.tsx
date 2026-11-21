@@ -41,7 +41,7 @@ export function Layout() {
             <path d="M17 14c2.8 0 4.5 1.9 4.5 4.5" />
           </svg>
         )}
-        {l.openCount > 0 && <span className="nav-count" title="Open items">{l.openCount}</span>}
+        <span className="nav-count" title="Open items">{l.openCount}</span>
       </NavLink>
     </li>
   );

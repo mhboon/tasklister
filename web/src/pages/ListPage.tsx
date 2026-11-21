@@ -132,7 +132,7 @@ export function ListPage() {
     return (
       <section className="page">
         <div className="page-head">
-          <button type="button" className="back-btn" onClick={() => show({ settings: null })}>← Back</button>
+          <button type="button" className="back-btn" aria-label="Back" title="Back" onClick={() => show({ settings: null })}>←</button>
           <h1>{list.name}</h1>
         </div>
         <div className="card settings-panel">
@@ -176,6 +176,7 @@ export function ListPage() {
       <section className="page master">
         <div className="page-head">
           <h1>{list.name}</h1>
+          <SortSelect value={sort} onChange={changeSort} />
           {canSettings && (
             <button type="button" className="icon-btn settings-btn" aria-label="List settings" title="List settings" onClick={() => show({ settings: '1', item: null })}>
               ⚙
@@ -188,8 +189,6 @@ export function ListPage() {
           <input placeholder="Add an item…" value={title} maxLength={200} onChange={(e) => setTitle(e.target.value)} aria-label="New item title" />
           <button type="submit" className="primary icon-submit" aria-label="Add item" title="Add item" disabled={adding || !title.trim()}>＋</button>
         </form>
-
-        <SortSelect value={sort} onChange={changeSort} />
 
         {error && <p className="error">{error}</p>}
         {loading && <p className="muted">Loading…</p>}

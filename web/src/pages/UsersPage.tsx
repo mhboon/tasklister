@@ -108,7 +108,7 @@ export function UsersPage() {
       {showDetail && (
         <aside className="detail-pane" aria-label="User details">
           <div className="detail-head">
-            <button type="button" className="back-btn" onClick={() => setOpenId(null)}>← Back</button>
+            <button type="button" className="back-btn" aria-label="Back" title="Back" onClick={() => setOpenId(null)}>←</button>
           </div>
           {openId === 'new' ? (
             <form className="card" onSubmit={create}>
