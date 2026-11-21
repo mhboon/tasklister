@@ -10,7 +10,9 @@ A personal/family to-do app for browser (laptop and phone). Served at
 - There are three roles. A **guest** only works on lists shared with them
   (no Inbox, can't create lists or folders). A **user** has a workspace of
   their own (Inbox, lists, folders, recurring items). An **admin** is a user
-  who also manages people.
+  who also manages people. A user may create guests (to share a list with someone
+  new, from the list's share panel) but nothing more; only admins reset passwords
+  or change roles.
 - An admin creates a user (name, email, role). Nothing is emailed:
   the admin gets a one-time temporary password to pass on, and the user
   must choose their own at first sign-in. Admins can also reset a password,
@@ -69,6 +71,8 @@ A personal/family to-do app for browser (laptop and phone). Served at
   an arrow only.
 - An item can be moved to another list you can access, from the opened item.
   It takes its subitems along and leaves any recurrence it came from.
+- Notes are shown as text with clickable links. The pencil edits them and the
+  check stores them.
 - URLs in an item's title are clickable and open in a new tab.
 - Item delete is a trash icon, shown only when the item is opened.
 - Open items are sorted per list: Inbox newest first, other lists A–Z. The
@@ -124,7 +128,29 @@ A personal/family to-do app for browser (laptop and phone). Served at
   Shortcut that opens the same form.) A link shared inside the text is
   extracted, and signing in first doesn't lose what was shared.
 - When a link is shared, the app looks the page up (Open Graph tags, then the
-  page title) and pre-fills the title and notes with what it finds, without
-  overwriting anything you typed. Pages that block bots or need a login (many
+  page title) and pre-fills the form without overwriting anything you typed:
+  the title keeps the link followed by the page's title cut to 80 characters,
+  and the notes repeat the full page title and its description. Pages that block bots or need a login (many
   Instagram, LinkedIn and Gmail links) give nothing, and the form stays as
   shared. The lookup only reaches public web addresses.
+
+## Items by email
+
+- Mail to `me@<domain>` (the site's domain) adds an item to the sender's Inbox.
+  Mail to `<name>@<domain>` adds an item to that list. A list has an address
+  only once its **owner** switches it on in the list settings and picks the
+  name (3–32 characters: lowercase letters, digits, `.`, `_`, `-`; unique across
+  all lists; some names such as `me` and `postmaster` are reserved). Turning it
+  off, or deleting the list, frees the name.
+- Only the right sender is accepted: a registered, enabled, non-guest user for
+  `me@`, and a **member of the list** for a list address. The mail must pass
+  DMARC (so the From address can't be forged) and the spam and virus scans, and
+  a sender can send 30 mails an hour.
+- **Everything else fails silently**: no bounce, no reply, so a sender can't
+  tell an unknown list from an unauthorised sender.
+- The subject (without `Fwd:`/`Re:`) is the title and the plain-text body the
+  notes; with no subject, the first line of the body is the title. Attachments
+  and HTML are ignored. If the title is just a link and there are no notes, the
+  link is looked up and the item is formatted as for a shared link.
+- Senders whose mail provider doesn't publish a DMARC policy are not accepted.
+  Gmail, Outlook and iCloud do.

@@ -2,6 +2,7 @@ import { PutCommand, UpdateCommand, TransactWriteCommand, DeleteCommand, QueryCo
 import { ddb, tables, newId, nowIso, queryAll, batchGet, batchDelete, UserError } from '../../shared/db';
 import { requireUser, requireMember, requireOwner, getList, listItemRows, userNames, getMembership } from '../../shared/access';
 import { compareText } from '../../shared/text';
+import { cleanMailName } from '../../shared/mailnames';
 import { cleanName, normEmail } from '../../shared/validate';
 import { requireFolder } from './folders';
 import { findUserByEmail } from './users';
@@ -19,6 +20,7 @@ function summary({ list, membership, memberCount, openCount, ownerName }: Summar
     isInbox: !!list.isInbox,
     folderId: membership.folderId ?? null,
     memberCount,
+    mailName: list.mailName ?? null,
     openCount,
   };
 }
@@ -164,6 +166,8 @@ export async function deleteList(ctx: Ctx, args: { listId: string }) {
     }),
   ]);
   await batchDelete(tables.items, items.map((i) => ({ listId: i.listId, itemId: i.itemId })));
+  const mailName = (await getList(args.listId))?.mailName;
+  if (mailName) await ddb.send(new DeleteCommand({ TableName: tables.mailboxes, Key: { name: mailName } }));
   // Other members first, owner's row and the list itself last, so a
   // partial failure leaves the owner able to retry.
   await batchDelete(
@@ -179,6 +183,49 @@ export async function deleteList(ctx: Ctx, args: { listId: string }) {
     })
   );
   return true;
+}
+
+/**
+ * Owner only. Gives the list an email address (or changes it) or, with no
+ * name, turns it off. Names are unique across all lists: the claim is a
+ * conditional write, and the old name is released in the same transaction.
+ */
+export async function setListMailName(ctx: Ctx, args: { listId: string; name?: string | null }) {
+  requireUser(ctx);
+  if (!process.env.MAIL_DOMAIN) throw new UserError('Email is not set up.');
+  await requireOwner(ctx, args.listId);
+  const list = assertNotInbox(await getList(args.listId));
+  const name = args.name ? cleanMailName(args.name) : null;
+  if (name === (list.mailName ?? null)) return summaryFor(ctx, args.listId);
+
+  const items: NonNullable<ConstructorParameters<typeof TransactWriteCommand>[0]['TransactItems']> = [];
+  if (list.mailName) items.push({ Delete: { TableName: tables.mailboxes, Key: { name: list.mailName } } });
+  if (name) {
+    items.push({
+      Put: {
+        TableName: tables.mailboxes,
+        Item: { name, listId: args.listId },
+        ConditionExpression: 'attribute_not_exists(#n)',
+        ExpressionAttributeNames: { '#n': 'name' },
+      },
+    });
+  }
+  items.push({
+    Update: {
+      TableName: tables.lists,
+      Key: { listId: args.listId },
+      ...(name
+        ? { UpdateExpression: 'SET mailName = :m', ExpressionAttributeValues: { ':m': name } }
+        : { UpdateExpression: 'REMOVE mailName' }),
+    },
+  });
+  try {
+    await ddb.send(new TransactWriteCommand({ TransactItems: items }));
+  } catch (e) {
+    if ((e as Error).name === 'TransactionCanceledException') throw new UserError('That address name is already taken.');
+    throw e;
+  }
+  return summaryFor(ctx, args.listId);
 }
 
 /** Folders are personal: this only changes the caller's own placement. */

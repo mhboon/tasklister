@@ -52,6 +52,8 @@ type ListSummary {
   "The caller's own folder for this list; null = root."
   folderId: ID
   memberCount: Int!
+  "The part before the @ of the list's email address; null = email is off."
+  mailName: String
   "Open (not completed) items in the list; subitems are not counted."
   openCount: Int!
 }
@@ -149,6 +151,8 @@ type Query {
   listRecurring: [Recurring!]!
   "Title and description of a link, read from the page. Fields are null when the page can't be read."
   linkPreview(url: String!): LinkPreview!
+  "The domain items can be emailed to (me@ and list addresses); null when email is not set up."
+  mailDomain: String
 }
 
 type Mutation {
@@ -169,6 +173,8 @@ type Mutation {
   renameList(listId: ID!, name: String!): ListSummary!
   "Owner only. Deletes the list, its items and every membership."
   deleteList(listId: ID!): Boolean!
+  "Owner only. Turns the list's email address on (or renames it) with a unique name, or off with null."
+  setListMailName(listId: ID!, name: String): ListSummary!
   "Moves the list within the caller's own folder tree only."
   moveList(listId: ID!, folderId: ID): ListSummary!
   "Owner only. The invitee must already be an authorized user."

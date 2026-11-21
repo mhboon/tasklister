@@ -166,7 +166,10 @@ function temporaryPassword(): string {
 }
 
 export async function createUser(ctx: Ctx, args: { email: string; displayName: string; role: Role }) {
-  requireAdmin(ctx);
+  // Users may invite guests (e.g. to share a list with someone new); anything
+  // more than that, and resetting passwords, stays with the admins.
+  requireUser(ctx);
+  if (cleanRole(args.role) !== 'GUEST') requireAdmin(ctx);
   const email = normEmail(args.email);
   if (!/^[^@\s]+@[^@\s]+\.[^@\s]+$/.test(email)) throw new UserError('Enter a valid email address.');
   const displayName = cleanName(args.displayName, 'Name');

@@ -13,7 +13,9 @@ export interface Ctx {
 
 export interface UserRow { userId: string; email: string; displayName: string; createdAt: string }
 export interface FolderRow { ownerId: string; folderId: string; name: string }
-export interface ListRow { listId: string; ownerId: string; name: string; isInbox?: boolean; createdAt: string }
+export interface ListRow { listId: string; ownerId: string; name: string; isInbox?: boolean; mailName?: string; createdAt: string }
+/** Routes a list address to its list. `name` is the part before the @. */
+export interface MailboxRow { name: string; listId: string }
 export interface MemberRow { userId: string; listId: string; role: 'OWNER' | 'MEMBER'; folderId?: string }
 export interface ItemRow {
   listId: string;

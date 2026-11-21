@@ -5,6 +5,8 @@ interface AppData {
   me: User | null;
   lists: ListSummary[];
   folders: Folder[];
+  /** Where items can be emailed to; null when email is not set up. */
+  mailDomain: string | null;
   loading: boolean;
   error: string | null;
   refresh: () => Promise<void>;
@@ -17,6 +19,7 @@ export function AppDataProvider({ children }: { children: ReactNode }) {
   const [me, setMe] = useState<User | null>(null);
   const [lists, setLists] = useState<ListSummary[]>([]);
   const [folders, setFolders] = useState<Folder[]>([]);
+  const [mailDomain, setMailDomain] = useState<string | null>(null);
   const [loading, setLoading] = useState(true);
   const [error, setError] = useState<string | null>(null);
 
@@ -24,10 +27,11 @@ export function AppDataProvider({ children }: { children: ReactNode }) {
     try {
       // `me` first: it creates the user row and Inbox on first sign-in.
       const user = await api.me();
-      const [l, f] = await Promise.all([api.listLists(), api.listFolders()]);
+      const [l, f, m] = await Promise.all([api.listLists(), api.listFolders(), api.mailDomain().catch(() => null)]);
       setMe(user);
       setLists(l);
       setFolders(f);
+      setMailDomain(m);
       setError(null);
     } catch (e) {
       setError((e as Error).message);
@@ -40,7 +44,7 @@ export function AppDataProvider({ children }: { children: ReactNode }) {
     refresh();
   }, [refresh]);
 
-  return <Ctx.Provider value={{ me, lists, folders, loading, error, refresh }}>{children}</Ctx.Provider>;
+  return <Ctx.Provider value={{ me, lists, folders, mailDomain, loading, error, refresh }}>{children}</Ctx.Provider>;
 }
 
 // eslint-disable-next-line react-refresh/only-export-components

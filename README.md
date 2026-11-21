@@ -38,6 +38,7 @@ Uses whatever AWS credentials are active (`aws login`). Region `eu-west-1`.
    cp ../web/.env.example ../web/.env.local   # fill in ApiUrl / UserPoolId / UserPoolClientId
    (cd ../web && npm run build)
    npx cdk deploy TasklisterCertStack TasklisterWebStack
+   npx cdk deploy TasklisterMailStack      # optional: items by email (needs the three variables above)
    ```
    The certificate validates through DNS in that zone; allow a few minutes.
 4. **Create the first admin** (nothing exists to sign in with yet):

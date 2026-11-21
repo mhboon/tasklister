@@ -13,8 +13,17 @@ import { NodejsFunction } from 'aws-cdk-lib/aws-lambda-nodejs';
 const SCHEMA = path.join(__dirname, '../graphql/schema.graphql');
 const TIME_ZONE = 'Europe/Amsterdam';
 
+export interface BackendStackProps extends StackProps {
+  /** The domain items can be emailed to; unset = email is off. */
+  mailDomain?: string;
+}
+
 export class TasklisterBackendStack extends Stack {
-  constructor(scope: Construct, id: string, props?: StackProps) {
+  /** Shared with the mail stack, which reads and writes the same tables. */
+  public readonly tables: Record<'users' | 'lists' | 'members' | 'items' | 'mailboxes', dynamodb.Table>;
+  public readonly userPool: cognito.UserPool;
+
+  constructor(scope: Construct, id: string, props?: BackendStackProps) {
     super(scope, id, props);
 
     // ---- DynamoDB (one table per entity; see ARCHITECTURE.md) ----
@@ -48,6 +57,11 @@ export class TasklisterBackendStack extends Stack {
     });
     const itemsTable = table('ItemsTable', 'TasklisterItems', 'listId', 'itemId');
     const recurringTable = table('RecurringTable', 'TasklisterRecurring', 'ownerId', 'recurringId');
+    // Routes list email addresses to lists, and counts mails per sender per hour.
+    const mailboxesTable = table('MailboxesTable', 'TasklisterMailboxes', 'name');
+    const cfnMailboxes = mailboxesTable.node.defaultChild as dynamodb.CfnTable;
+    cfnMailboxes.timeToLiveSpecification = { attributeName: 'expiresAt', enabled: true };
+    this.tables = { users: usersTable, lists: listsTable, members: membersTable, items: itemsTable, mailboxes: mailboxesTable };
 
     // ---- Cognito ----
     // Sign-in is by email + password, and only for accounts an admin has
@@ -72,6 +86,7 @@ export class TasklisterBackendStack extends Stack {
       userPoolId: userPool.userPoolId,
       groupName: 'Users',
     });
+    this.userPool = userPool;
     const userPoolClient = userPool.addClient('WebClient', {
       authFlows: { userSrp: true },
       preventUserExistenceErrors: true,
@@ -99,6 +114,7 @@ export class TasklisterBackendStack extends Stack {
       MEMBERS_TABLE: membersTable.tableName,
       ITEMS_TABLE: itemsTable.tableName,
       RECURRING_TABLE: recurringTable.tableName,
+      MAILBOXES_TABLE: mailboxesTable.tableName,
       TZ_NAME: TIME_ZONE,
     };
 
@@ -107,9 +123,9 @@ export class TasklisterBackendStack extends Stack {
       runtime: lambda.Runtime.NODEJS_22_X,
       timeout: Duration.seconds(15),
       memorySize: 512,
-      environment: { ...env, USER_POOL_ID: userPool.userPoolId },
+      environment: { ...env, USER_POOL_ID: userPool.userPoolId, ...(props?.mailDomain ? { MAIL_DOMAIN: props.mailDomain } : {}) },
     });
-    for (const t of [usersTable, foldersTable, listsTable, membersTable, itemsTable, recurringTable]) {
+    for (const t of [usersTable, foldersTable, listsTable, membersTable, itemsTable, recurringTable, mailboxesTable]) {
       t.grantReadWriteData(apiFn); // also grants the table's indexes
     }
     apiFn.addToRolePolicy(
@@ -135,12 +151,12 @@ export class TasklisterBackendStack extends Stack {
     const fields: Record<string, string[]> = {
       Query: [
         'me', 'listUsers', 'listFolders', 'listLists', 'listMembers', 'listItems',
-        'listAgenda', 'listPriority', 'listRecurring', 'linkPreview',
+        'listAgenda', 'listPriority', 'listRecurring', 'linkPreview', 'mailDomain',
       ],
       Mutation: [
         'createUser', 'resetUserPassword', 'setUserEnabled', 'setUserRole',
         'createFolder', 'renameFolder', 'deleteFolder',
-        'createList', 'renameList', 'deleteList', 'moveList', 'shareList', 'unshareList',
+        'createList', 'renameList', 'deleteList', 'moveList', 'setListMailName', 'shareList', 'unshareList',
         'createItem', 'updateItem', 'setItemStatus', 'moveItem', 'deleteItem',
         'addSubitem', 'setSubitemStatus', 'deleteSubitem',
         'createRecurring', 'updateRecurring', 'deleteRecurring',

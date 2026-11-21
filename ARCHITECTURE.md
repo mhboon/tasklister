@@ -17,12 +17,32 @@ EventBridge (daily 03:00 UTC) ──► RecurringFn (Lambda) ──► DynamoDB
 | `TasklisterBackendStack` | eu-west-1 | tables, Cognito, AppSync, ApiFn, RecurringFn + schedule |
 | `TasklisterCertStack` | us-east-1 | ACM certificate for `<your-domain>` (CloudFront requires us-east-1), DNS-validated in the existing `<your-zone>` zone |
 | `TasklisterWebStack` | eu-west-1 | S3, CloudFront + security headers/CSP, Route 53 A/AAAA, deploy of `web/dist` |
+| `TasklisterMailStack` | eu-west-1 | items by email: S3 bucket (mail kept ≤1 day), SES receipt rule set (made the active one), `GateFn` + `ProcessFn`, MX record for the site domain |
 | `TasklisterGithubOidcStack` | eu-west-1 | one-time: deploy role for GitHub Actions. Reuses the account's existing GitHub OIDC provider (an account can have only one) |
 
 The web stacks need a concrete `env` for cross-region references, taken from
 `CDK_DEFAULT_ACCOUNT` (deploy credentials), so no account ID is committed. The
 hosted zone ID, zone name and site domain come from `HOSTED_ZONE_ID`,
 `HOSTED_ZONE_NAME` and `SITE_DOMAIN`.
+
+## Items by email
+
+SES receives all mail for the site domain (MX record) in one receipt rule with
+three actions, in order:
+
+1. **`GateFn`** (synchronous). Decides before anything is stored. It reads the visible From
+   address, requires DMARC pass and clean spam/virus verdicts, finds the sender (a registered,
+   enabled user), resolves each recipient (`me@` → the sender's Inbox, `<name>@` → the list in
+   `TasklisterMailboxes`, only if the sender is a member) and counts the sender's mails per hour.
+   Anything that fails returns `STOP_RULE_SET`: the mail is dropped, never bounced, so nobody can
+   tell which check failed. SES accepts the whole domain for exactly this reason.
+2. **S3**: the raw mail, expiring after a day.
+3. **`ProcessFn`** (asynchronous, no retries so an item is never added twice). Repeats the
+   checks, parses the mail (subject → title, plain text → notes), looks the link up when the title is a link
+   and there are no notes (the code behind `linkPreview`), creates the item and deletes the object.
+
+SES allows one active receipt rule set per region and account, so the stack activates its own
+(a custom resource, because CloudFormation can't) and deactivates it on delete.
 
 ## Data (one table per entity)
 
@@ -34,6 +54,7 @@ hosted zone ID, zone name and site domain come from `HOSTED_ZONE_ID`,
 | `TasklisterListMembers` | `userId` / `listId` | `role` OWNER\|MEMBER, **`folderId`** (this user's folder for the list). GSI `byList` for members of a list. This row is the access check for everything |
 | `TasklisterItems` | `listId` / `itemId` | an item, or a subitem as `itemId#subitemId` with `parentId`. One Query returns a list's items with their subitems |
 | `TasklisterRecurring` | `ownerId` / `recurringId` | schedule, target list, `nextDue`, `active` |
+| `TasklisterMailboxes` | `name` | list address name → `listId` (the claim is a conditional write, so names are unique). Also `rate#<userId>#<hour>` counters, expired by TTL (`expiresAt`) |
 
 Ids are time-sortable (`base36 time + random`), so key order is creation order.
 All tables: pay-per-request, `RETAIN`, point-in-time recovery.
