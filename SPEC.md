@@ -84,6 +84,8 @@ A personal/family to-do app for browser (laptop and phone). Served at
 
 ## Look and feel
 
+- The navigation lists Recurring and Users (these are settings, not daily
+  views) at the bottom, above Account.
 - Everyday actions are icons with a hover/screen-reader label, one drawing per
   meaning across the app (pencil = edit/rename, trash = delete, people =
   share, + = add). In list settings the icons carry a short caption.
@@ -154,3 +156,28 @@ A personal/family to-do app for browser (laptop and phone). Served at
   link is looked up and the item is formatted as for a shared link.
 - Senders whose mail provider doesn't publish a DMARC policy are not accepted.
   Gmail, Outlook and iCloud do.
+
+## Other sender addresses
+
+- Someone can add other addresses they send from (a work mailbox, say) on the
+  Account page, up to 5. Mail from a verified address is treated exactly as
+  mail from the person's own address: the same `me@`, the same lists.
+- An address has a state: **pending** (added; a code is shown, valid for 24
+  hours), **expired** (the code ran out; ask for a new one) or **verified**
+  (active). Removing it at any time ends it.
+- To verify, send a mail **from that address** to `me@<domain>` with the code
+  in the subject. Because the mail must pass the same DMARC check, this proves
+  the person controls the address. The verification mail creates no item.
+- An address can't be anyone's own sign-in address or another person's verified
+  address, and every refusal gives the same answer, so it doesn't reveal who is
+  registered. Several people may hold a pending claim on the same address; only
+  the one who proves control gets it.
+- Senders are assumed to pass DMARC. Automated systems that don't are not
+  supported.
+
+## Voice
+
+- A mic button next to the add box dictates an item (where the browser
+  supports speech recognition; it is hidden otherwise). The title is the first
+  80 characters cut at a whole word. When it had to be cut, the full text goes
+  into the notes. It listens in the phone's language.

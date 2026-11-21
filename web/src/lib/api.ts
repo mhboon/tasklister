@@ -23,6 +23,8 @@ export interface Recurring {
   frequency: Frequency; interval: number; weekday: number | null; dayOfMonth: number | null;
   startDate: string; nextDue: string; criticality: Criticality | null; active: boolean;
 }
+export type SenderStatus = 'PENDING' | 'EXPIRED' | 'VERIFIED';
+export interface SenderAddress { email: string; status: SenderStatus; code: string | null; expiresAt: string | null }
 export interface LinkPreview { url: string; title: string | null; description: string | null; siteName: string | null }
 export interface RecurringInput {
   title: string; targetListId: string; frequency: Frequency; interval: number;
@@ -104,6 +106,16 @@ export const api = {
       `mutation($listId:ID!,$name:String){ setListMailName(listId:$listId,name:$name){ ${LIST} } }`,
       { listId, name }
     ),
+  listSenderAddresses: () =>
+    q<'listSenderAddresses', SenderAddress[]>('listSenderAddresses', `query { listSenderAddresses { email status code expiresAt } }`),
+  addSenderAddress: (email: string) =>
+    q<'addSenderAddress', SenderAddress>(
+      'addSenderAddress',
+      `mutation($email:String!){ addSenderAddress(email:$email){ email status code expiresAt } }`,
+      { email }
+    ),
+  removeSenderAddress: (email: string) =>
+    q<'removeSenderAddress', boolean>('removeSenderAddress', `mutation($email:String!){ removeSenderAddress(email:$email) }`, { email }),
   mailDomain: () => q<'mailDomain', string | null>('mailDomain', `query { mailDomain }`),
   moveList: (listId: string, folderId: string | null) =>
     q<'moveList', ListSummary>(

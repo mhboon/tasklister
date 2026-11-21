@@ -1,5 +1,6 @@
 import type { SESEvent } from 'aws-lambda';
-import { isAuthentic } from '../shared/inbound';
+import { isAuthentic, parseAddress } from '../shared/inbound';
+import { extractClaimCode, verifyClaim } from '../shared/senders';
 import { resolveMail, takeMailAllowance } from '../shared/mail-resolve';
 
 type Disposition = { disposition: 'CONTINUE' | 'STOP_RULE_SET' };
@@ -22,6 +23,10 @@ export async function handler(event: SESEvent): Promise<Disposition> {
     const domain = process.env.MAIL_DOMAIN;
     if (!domain) return decide(STOP, 'no-domain-config');
     if (!isAuthentic(message.receipt)) return decide(STOP, 'not-authentic');
+    // A mail that proves an extra sender address is used up here and creates no item.
+    const code = extractClaimCode(message.mail.commonHeaders?.subject);
+    const from = parseAddress(message.mail.commonHeaders?.from?.[0]);
+    if (code && from && (await verifyClaim(code, from))) return decide(STOP, 'sender-verified');
     const target = await resolveMail(message, domain);
     if (!target) return decide(STOP, 'no-target');
     if (!(await takeMailAllowance(target.userId))) return decide(STOP, 'rate-limited');

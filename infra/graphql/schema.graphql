@@ -95,6 +95,22 @@ type LinkPreview {
   siteName: String
 }
 
+enum SenderStatus {
+  PENDING
+  EXPIRED
+  VERIFIED
+}
+
+"An extra address the caller may send mail from, acting as themselves."
+type SenderAddress {
+  email: String!
+  status: SenderStatus!
+  "While PENDING: send a mail from the address to me@ with this code in the subject."
+  code: String
+  "When a pending code stops working."
+  expiresAt: String
+}
+
 type Recurring {
   recurringId: ID!
   title: String!
@@ -153,6 +169,7 @@ type Query {
   linkPreview(url: String!): LinkPreview!
   "The domain items can be emailed to (me@ and list addresses); null when email is not set up."
   mailDomain: String
+  listSenderAddresses: [SenderAddress!]!
 }
 
 type Mutation {
@@ -175,6 +192,9 @@ type Mutation {
   deleteList(listId: ID!): Boolean!
   "Owner only. Turns the list's email address on (or renames it) with a unique name, or off with null."
   setListMailName(listId: ID!, name: String): ListSummary!
+  "Starts (or restarts) proving that the caller controls an extra sender address."
+  addSenderAddress(email: String!): SenderAddress!
+  removeSenderAddress(email: String!): Boolean!
   "Moves the list within the caller's own folder tree only."
   moveList(listId: ID!, folderId: ID): ListSummary!
   "Owner only. The invitee must already be an authorized user."
