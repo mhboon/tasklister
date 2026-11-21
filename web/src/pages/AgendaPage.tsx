@@ -1,6 +1,8 @@
+import { useState } from 'react';
 import { api, type Item } from '../lib/api';
 import { useLoad } from '../lib/useLoad';
 import { ItemRow } from '../components/ItemRow';
+import { ItemDetail } from '../components/ItemDetail';
 import { compareText } from '../lib/sort';
 import { isOverdue, relativeLabel } from '../lib/dates';
 
@@ -9,6 +11,8 @@ const byDateThenTitle = (items: Item[]) =>
 
 export function AgendaPage() {
   const { data, setData, error, setError, loading } = useLoad(() => api.listAgenda());
+  // Kept apart from `data`: editing the due date can take an item out of this view.
+  const [openItem, setOpenItem] = useState<Item | null>(null);
 
   const update = (updated: Item | null, old: Item) =>
     setData((cur) => {
@@ -28,7 +32,8 @@ export function AgendaPage() {
   }
 
   return (
-    <section className="page">
+    <div className={`split${openItem ? ' has-detail' : ''}`}>
+    <section className="page master">
       <h1>Agenda</h1>
       <p className="muted small">Open items with a due date, oldest first, A–Z within a day. Overdue items are red.</p>
       {error && <p className="error">{error}</p>}
@@ -43,12 +48,36 @@ export function AgendaPage() {
             </h2>
             <ul className="items">
               {g.items.map((i) => (
-                <ItemRow key={`${i.listId}/${i.itemId}`} item={i} showList onError={setError} onChange={(u) => update(u, i)} />
+                <ItemRow
+                  key={`${i.listId}/${i.itemId}`}
+                  item={i}
+                  selected={openItem?.itemId === i.itemId}
+                  showList
+                  onOpen={() => setOpenItem(i)}
+                  onError={setError}
+                  onChange={(u) => {
+                    update(u, i);
+                    if (openItem?.itemId === i.itemId) setOpenItem(u);
+                  }}
+                />
               ))}
             </ul>
           </div>
         );
       })}
     </section>
+    {openItem && (
+      <ItemDetail
+        key={openItem.itemId}
+        item={openItem}
+        onError={setError}
+        onClose={() => setOpenItem(null)}
+        onChange={(u) => {
+          update(u, openItem);
+          setOpenItem(u);
+        }}
+      />
+    )}
+    </div>
   );
 }

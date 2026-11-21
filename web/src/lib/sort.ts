@@ -16,19 +16,22 @@ export const SORT_OPTIONS: { key: SortKey; label: string }[] = [
   { key: 'alpha-desc', label: 'Z → A' },
   { key: 'created-desc', label: 'Newest first' },
   { key: 'created-asc', label: 'Oldest first' },
-  { key: 'priority-asc', label: 'Priority: high first' },
-  { key: 'priority-desc', label: 'Priority: low first' },
-  { key: 'due-asc', label: 'Due: soonest first' },
-  { key: 'due-desc', label: 'Due: latest first' },
+  { key: 'priority-asc', label: 'Priority: high → low' },
+  { key: 'priority-desc', label: 'Priority: low → high' },
+  { key: 'due-asc', label: 'Due: oldest → newest' },
+  { key: 'due-desc', label: 'Due: newest → oldest' },
 ];
 
 const RANK: Record<Criticality, number> = { HIGH: 0, MEDIUM: 1, LOW: 2 };
 
-/** Items without a priority / due date always sort last, in either direction. */
+/**
+ * Ascending puts items without a priority / due date last; descending is the
+ * exact reverse, so they come first.
+ */
 function withMissingLast<T>(a: T | null, b: T | null, cmp: (x: T, y: T) => number, desc: boolean): number {
   if (a == null && b == null) return 0;
-  if (a == null) return 1;
-  if (b == null) return -1;
+  if (a == null) return desc ? -1 : 1;
+  if (b == null) return desc ? 1 : -1;
   return desc ? -cmp(a, b) : cmp(a, b);
 }
 
