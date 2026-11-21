@@ -8,6 +8,7 @@ import { ItemRow } from '../components/ItemRow';
 import { ItemDetail } from '../components/ItemDetail';
 import { ConfirmDialog } from '../components/ConfirmDialog';
 import { PromptDialog } from '../components/PromptDialog';
+import { Icon } from '../components/Icon';
 import { SortSelect } from '../components/SortSelect';
 import { compareText, loadSort, saveSort, sortItems, type SortKey } from '../lib/sort';
 
@@ -132,7 +133,7 @@ export function ListPage() {
     return (
       <section className="page">
         <div className="page-head">
-          <button type="button" className="back-btn" onClick={() => show({ settings: null })}>← Back</button>
+          <button type="button" className="back-btn" aria-label="Back" title="Back" onClick={() => show({ settings: null })}>←</button>
           <h1>{list.name}</h1>
         </div>
         <div className="card settings-panel">
@@ -155,12 +156,24 @@ export function ListPage() {
             </select>
           </label>
           <div className="head-actions">
-            {list.isOwner && <button type="button" onClick={() => setRenaming(true)}>Rename</button>}
-            {list.isOwner && <button type="button" onClick={() => setSharing(!sharing)} aria-expanded={sharing}>Share{list.memberCount > 1 ? ` (${list.memberCount})` : ''}</button>}
+            {list.isOwner && (
+              <button type="button" className="tool-btn" onClick={() => setRenaming(true)}>
+                <Icon name="pencil" /><small>Rename</small>
+              </button>
+            )}
+            {list.isOwner && (
+              <button type="button" className="tool-btn" onClick={() => setSharing(!sharing)} aria-expanded={sharing}>
+                <Icon name="people" /><small>Share{list.memberCount > 1 ? ` (${list.memberCount})` : ''}</small>
+              </button>
+            )}
             {list.isOwner ? (
-              <button type="button" className="danger" onClick={() => setConfirm('delete')}>Delete</button>
+              <button type="button" className="tool-btn danger" onClick={() => setConfirm('delete')}>
+                <Icon name="trash" /><small>Delete</small>
+              </button>
             ) : (
-              <button type="button" className="danger" onClick={() => setConfirm('leave')}>Leave</button>
+              <button type="button" className="tool-btn danger" onClick={() => setConfirm('leave')}>
+                <Icon name="exit" /><small>Leave</small>
+              </button>
             )}
           </div>
         </div>
@@ -176,6 +189,7 @@ export function ListPage() {
       <section className="page master">
         <div className="page-head">
           <h1>{list.name}</h1>
+          <SortSelect value={sort} onChange={changeSort} />
           {canSettings && (
             <button type="button" className="icon-btn settings-btn" aria-label="List settings" title="List settings" onClick={() => show({ settings: '1', item: null })}>
               ⚙
@@ -189,8 +203,6 @@ export function ListPage() {
           <button type="submit" className="primary icon-submit" aria-label="Add item" title="Add item" disabled={adding || !title.trim()}>＋</button>
         </form>
 
-        <SortSelect value={sort} onChange={changeSort} />
-
         {error && <p className="error">{error}</p>}
         {loading && <p className="muted">Loading…</p>}
         {!loading && items && (
@@ -199,7 +211,7 @@ export function ListPage() {
             <ul className="items">{open.map(row)}</ul>
             {done.length > 0 && (
               <details className="completed">
-                <summary>Completed ({done.length})</summary>
+                <summary><Icon name="check" size={16} /> Completed ({done.length})</summary>
                 <ul className="items">{done.map(row)}</ul>
               </details>
             )}
@@ -271,7 +283,7 @@ function SharePanel({ listId, onChanged }: { listId: string; onChanged: () => Pr
           <option value="">Choose a user…</option>
           {candidates.map((u) => <option key={u.userId} value={u.email}>{u.displayName} ({u.email})</option>)}
         </select>
-        <button type="submit" disabled={busy || !email}>Share</button>
+        <button type="submit" className="icon-submit" aria-label="Share" title="Share" disabled={busy || !email}><Icon name="people" /></button>
       </form>
       <p className="muted small">Everyone on the list can add, complete and remove items. Only you can rename, share or delete it.</p>
       {error && <p className="error">{error}</p>}

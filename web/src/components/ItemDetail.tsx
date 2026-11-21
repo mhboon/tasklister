@@ -1,8 +1,10 @@
-import { useState } from 'react';
+import { useRef, useState } from 'react';
 import { api, type Criticality, type Item } from '../lib/api';
+import { Icon } from './Icon';
 import { ConfirmDialog } from './ConfirmDialog';
 import { useAuth } from '../lib/useAuth';
 import { useAppData } from '../lib/AppData';
+import { relativeLabel } from '../lib/dates';
 import { compareText } from '../lib/sort';
 
 interface Props {
@@ -26,6 +28,11 @@ export function ItemDetail({ item, onChange, onError, onClose }: Props) {
   const [newSub, setNewSub] = useState('');
   const [title, setTitle] = useState(item.title);
   const [notes, setNotes] = useState(item.notes ?? '');
+  const dateRef = useRef<HTMLInputElement>(null);
+  // Open subitems A–Z first, then the completed ones A–Z.
+  const subitems = [...item.subitems].sort(
+    (a, b) => Number(a.status === 'DONE') - Number(b.status === 'DONE') || compareText(a.title, b.title)
+  );
 
   async function run<T>(fn: () => Promise<T>, then: (r: T) => void) {
     setBusy(true);
@@ -41,88 +48,21 @@ export function ItemDetail({ item, onChange, onError, onClose }: Props) {
   return (
     <aside className="detail-pane" aria-label="Item details">
       <div className="detail-head">
-        <button type="button" className="back-btn" onClick={onClose}>← Back</button>
+        <button type="button" className="back-btn" aria-label="Back" title="Back" onClick={onClose}>←</button>
       </div>
       <div className="item-detail">
-        <ul className="subitems">
-          {item.subitems.map((s) => (
-            <li key={s.subitemId} className={s.status === 'DONE' ? 'done' : ''}>
-              <input
-                type="checkbox"
-                aria-label={`Subitem ${s.title}`}
-                checked={s.status === 'DONE'}
-                disabled={busy}
-                onChange={() =>
-                  run(() => api.setSubitemStatus(item.listId, item.itemId, s.subitemId, s.status === 'DONE' ? 'OPEN' : 'DONE'), onChange)
-                }
-              />
-              <span className="sub-title">{s.title}</span>
-              {canWork && <button
-                type="button"
-                className="icon-btn"
-                aria-label={`Remove subitem ${s.title}`}
-                disabled={busy}
-                onClick={() => run(() => api.deleteSubitem(item.listId, item.itemId, s.subitemId), onChange)}
-              >
-                ✕
-              </button>}
-            </li>
-          ))}
-        </ul>
-
-        <form
-          className="inline-form"
-          onSubmit={(e) => {
-            e.preventDefault();
-            const t = newSub.trim();
-            if (!t) return;
-            run(() => api.addSubitem(item.listId, item.itemId, t), (r) => {
-              setNewSub('');
-              onChange(r);
-            });
+        <input
+          className="detail-title"
+          aria-label="Title"
+          value={title}
+          maxLength={200}
+          onChange={(e) => setTitle(e.target.value)}
+          onBlur={() => {
+            const t = title.trim();
+            if (t && t !== item.title) run(() => api.updateItem(item.listId, item.itemId, { title: t }), onChange);
+            else setTitle(item.title);
           }}
-        >
-          <input placeholder="Add subitem" value={newSub} maxLength={200} onChange={(e) => setNewSub(e.target.value)} />
-          <button type="submit" disabled={busy || !newSub.trim()}>Add</button>
-        </form>
-
-        <div className="edit-grid">
-          <label className="field">
-            <span>Title</span>
-            <input
-              value={title}
-              maxLength={200}
-              onChange={(e) => setTitle(e.target.value)}
-              onBlur={() => {
-                const t = title.trim();
-                if (t && t !== item.title) run(() => api.updateItem(item.listId, item.itemId, { title: t }), onChange);
-                else setTitle(item.title);
-              }}
-            />
-          </label>
-          <label className="field">
-            <span>Due date</span>
-            <input
-              type="date"
-              value={item.dueDate ?? ''}
-              onChange={(e) => run(() => api.updateItem(item.listId, item.itemId, { dueDate: e.target.value || null }), onChange)}
-            />
-          </label>
-          <label className="field">
-            <span>Criticality</span>
-            <select
-              value={item.criticality ?? ''}
-              onChange={(e) =>
-                run(() => api.updateItem(item.listId, item.itemId, { criticality: (e.target.value || null) as Criticality | null }), onChange)
-              }
-            >
-              <option value="">None</option>
-              <option value="HIGH">High</option>
-              <option value="MEDIUM">Medium</option>
-              <option value="LOW">Low</option>
-            </select>
-          </label>
-        </div>
+        />
 
         <label className="field">
           <span>List</span>
@@ -142,6 +82,97 @@ export function ItemDetail({ item, onChange, onError, onClose }: Props) {
           </select>
         </label>
 
+        <div className="field">
+          <span>Due date</span>
+          <div className="due-row">
+            <button type="button" className="due-btn" disabled={busy} onClick={() => dateRef.current?.showPicker?.()}>
+              <Icon name="clock" size={18} />
+              <span>{item.dueDate ? relativeLabel(item.dueDate) : 'No due date'}</span>
+            </button>
+            {item.dueDate && (
+              <button
+                type="button"
+                className="icon-btn"
+                aria-label="Clear due date"
+                title="Clear due date"
+                disabled={busy}
+                onClick={() => run(() => api.updateItem(item.listId, item.itemId, { dueDate: null }), onChange)}
+              >
+                ✕
+              </button>
+            )}
+            {/* The native picker, opened by the clock button above. */}
+            <input
+              ref={dateRef}
+              className="visually-hidden"
+              type="date"
+              tabIndex={-1}
+              aria-label="Due date"
+              value={item.dueDate ?? ''}
+              onChange={(e) => run(() => api.updateItem(item.listId, item.itemId, { dueDate: e.target.value || null }), onChange)}
+            />
+          </div>
+        </div>
+
+        <label className="field">
+          <span>Priority</span>
+          <select
+            value={item.criticality ?? ''}
+            onChange={(e) =>
+              run(() => api.updateItem(item.listId, item.itemId, { criticality: (e.target.value || null) as Criticality | null }), onChange)
+            }
+          >
+            <option value="">– priority not set –</option>
+            <option value="HIGH">High</option>
+            <option value="MEDIUM">Medium</option>
+            <option value="LOW">Low</option>
+          </select>
+        </label>
+
+        <div className="field">
+          <span>Subitems</span>
+          <ul className="subitems">
+            {subitems.map((s) => (
+              <li key={s.subitemId} className={s.status === 'DONE' ? 'done' : ''}>
+                <input
+                  type="checkbox"
+                  aria-label={`Subitem ${s.title}`}
+                  checked={s.status === 'DONE'}
+                  disabled={busy}
+                  onChange={() =>
+                    run(() => api.setSubitemStatus(item.listId, item.itemId, s.subitemId, s.status === 'DONE' ? 'OPEN' : 'DONE'), onChange)
+                  }
+                />
+                <span className="sub-title">{s.title}</span>
+                {canWork && <button
+                  type="button"
+                  className="icon-btn"
+                  aria-label={`Remove subitem ${s.title}`}
+                  disabled={busy}
+                  onClick={() => run(() => api.deleteSubitem(item.listId, item.itemId, s.subitemId), onChange)}
+                >
+                  ✕
+                </button>}
+              </li>
+            ))}
+          </ul>
+          <form
+            className="inline-form"
+            onSubmit={(e) => {
+              e.preventDefault();
+              const t = newSub.trim();
+              if (!t) return;
+              run(() => api.addSubitem(item.listId, item.itemId, t), (r) => {
+                setNewSub('');
+                onChange(r);
+              });
+            }}
+          >
+            <input placeholder="Add subitem" aria-label="New subitem" value={newSub} maxLength={200} onChange={(e) => setNewSub(e.target.value)} />
+            <button type="submit" className="icon-submit" aria-label="Add subitem" title="Add subitem" disabled={busy || !newSub.trim()}>＋</button>
+          </form>
+        </div>
+
         <label className="field">
           <span>Notes</span>
           <textarea
@@ -158,9 +189,7 @@ export function ItemDetail({ item, onChange, onError, onClose }: Props) {
 
         {canWork && (
           <button type="button" className="icon-btn delete-btn" aria-label="Delete item" title="Delete item" onClick={() => setConfirmDelete(true)}>
-            <svg viewBox="0 0 24 24" width="20" height="20" aria-hidden="true" fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round">
-              <path d="M3 6h18M8 6V4h8v2M6 6l1 14h10l1-14M10 11v6M14 11v6" />
-            </svg>
+            <Icon name="trash" />
           </button>
         )}
       </div>

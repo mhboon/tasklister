@@ -28,7 +28,7 @@ export function PriorityPage() {
     <div className={`split${openItem ? ' has-detail' : ''}`}>
     <section className="page master">
       <h1>Priority</h1>
-      <p className="muted small">Open items that have a criticality, grouped by it. Items without one are not shown here.</p>
+      <p className="muted small">Open items that have a priority, grouped by it. Items without one are not shown here.</p>
       {error && <p className="error">{error}</p>}
       {loading && <p className="muted">Loading…</p>}
       {!loading && (data ?? []).length === 0 && <p className="muted empty">No prioritised items.</p>}

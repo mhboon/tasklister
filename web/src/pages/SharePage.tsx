@@ -1,5 +1,6 @@
 import { useState } from 'react';
 import { useNavigate, useSearchParams } from 'react-router-dom';
+import { Icon } from '../components/Icon';
 import { api, type Criticality } from '../lib/api';
 import { useAppData } from '../lib/AppData';
 import { loadShareTarget, saveShareTarget } from '../lib/sort';
@@ -75,7 +76,7 @@ export function SharePage() {
           </select>
         </label>
         {error && <p className="error">{error}</p>}
-        <button type="submit" className="primary" disabled={busy || !title.trim()}>Add</button>
+        <button type="submit" className="primary icon-submit" aria-label="Add" title="Add" disabled={busy || !title.trim()}><Icon name="plus" /></button>
       </form>
     </section>
   );

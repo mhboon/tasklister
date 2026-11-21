@@ -44,7 +44,8 @@ A personal/family to-do app for browser (laptop and phone). Served at
 - Lists are sorted alphabetically (case-insensitive), with the Inbox pinned first.
   Folders are sorted alphabetically too and shown below the top-level lists.
   All alphabetical sorting is case-insensitive.
-- Each list shows its number of **open items** (not the number of shares).
+- Each list shows its number of **open items** (not the number of shares),
+  including 0.
 - In a list view, a settings (⚙) button opens a screen with only the list's
   settings (rename, share, move to folder, delete/leave); the items are not
   shown next to it. Sharing picks from registered users.
@@ -53,7 +54,7 @@ A personal/family to-do app for browser (laptop and phone). Served at
 
 ## Items
 
-- An item has a title, optional **notes** (longer text), optional **due date**, optional **criticality**
+- An item has a title, optional **notes** (longer text), optional **due date**, optional **priority**
   (High / Medium / Low), and is open or completed (completed can be undone).
 - An item can have **subitems**, each open or completed. Subitems have only a
   title and status.
@@ -61,20 +62,33 @@ A personal/family to-do app for browser (laptop and phone). Served at
 - A new item is created from a title alone (one line, a + button). Date,
   priority, notes and subitems are set by opening the item: beside the list
   on a wide screen, as a screen of its own on a phone. Users work the same way.
+- An opened item shows, in this order: title, list (to move it), due date
+  (clock button to pick, ✕ to clear), priority ("priority not set" when
+  empty), subitems (open ones A–Z, then completed ones A–Z), notes. Back is
+  an arrow only.
 - An item can be moved to another list you can access, from the opened item.
   It takes its subitems along and leaves any recurrence it came from.
 - URLs in an item's title are clickable and open in a new tab.
 - Item delete is a trash icon, shown only when the item is opened.
 - Open items are sorted per list: Inbox newest first, other lists A–Z. The
-  user can switch to A–Z/Z–A, newest/oldest, priority (high → low → none) or
-  due date (oldest → newest → none); the reverse option is the exact reverse,
-  so items without a priority or date come first. The choice is remembered
+  user can switch the sort with a small box next to the list name (AZ,
+  Created, Priority, Due; ↑ ascending, ↓ descending: priority high → low →
+  none, due date oldest → newest → none; descending is the exact reverse, so
+  items without a priority or date come first). The choice is remembered
   per user (in the browser). Completed ones are collapsed below.
+
+## Look and feel
+
+- Everyday actions are icons with a hover/screen-reader label, one drawing per
+  meaning across the app (pencil = edit/rename, trash = delete, people =
+  share, + = add). In list settings the icons carry a short caption.
+- Words stay where an action is rare, risky or needs explaining: the Users and
+  Account pages, dialogs (Cancel, Create, Save, Delete…) and sign-in.
 
 ## Recurring items
 
 - A recurring item is its own thing: name, **schedule**, **target list**,
-  optional criticality. Schedule = every N days / weeks (on a weekday) /
+  optional priority. Schedule = every N days / weeks (on a weekday) /
   months (on a day of month, clamped to short months), anchored on a start date.
 - Every morning (~04:00 Amsterdam) each active recurring item that is due is
   created in its target list, **unless the previous one from the same recurrence
@@ -88,15 +102,15 @@ A personal/family to-do app for browser (laptop and phone). Served at
 
 - **Agenda:** open items with a due date, across all your lists, oldest first,
   grouped by day. Overdue (before today, in the viewer's timezone) is red.
-- **Priority:** open items that have a criticality, across all your lists,
-  grouped High / Medium / Low. Items **without** a criticality are not shown.
+- **Priority:** open items that have a priority, across all your lists,
+  grouped High / Medium / Low. Items **without** a priority are not shown.
 - Agenda groups are sorted A–Z within a day; Priority groups A–Z within a
   level; recurring items are sorted A–Z.
 - Both let you complete, edit and delete items in place.
 
 ## Interpretations worth checking
 
-- "Items with criticality are not shown" in Priority was read as *without*.
+- "Items with priority are not shown" in Priority was read as *without*.
 - Completed items are excluded from Agenda and Priority.
 - Subitems are removed without a confirmation prompt; items ask.
 
