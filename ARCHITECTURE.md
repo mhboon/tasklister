@@ -59,7 +59,16 @@ SES allows one active receipt rule set per region and account, so the stack acti
 | `TasklisterMailboxes` | `name` | list address name → `listId` (the claim is a conditional write, so names are unique). Also `rate#<userId>#<hour>` counters, `alias#<email>` verified extra sender addresses and `claim#<code>` pending claims (expired by TTL `expiresAt`). GSI `byUser` lists a person's addresses and claims; list address rows have no `userId`, so the index is sparse |
 
 Ids are time-sortable (`base36 time + random`), so key order is creation order.
-All tables: pay-per-request, `RETAIN`, point-in-time recovery.
+All tables: pay-per-request, `RETAIN`, deletion protection, point-in-time recovery.
+
+## Backups
+
+- **Point-in-time recovery** on every table: restore to any second in the last 35 days (DynamoDB's
+  maximum). A restore creates a new table.
+- **Daily backup** of every table by AWS Backup (02:00 UTC, vault `TasklisterBackupVault`), kept 90 days.
+- **Cognito** has no backup of its own, so `UserExportFn` writes everyone who may sign in (email,
+  role, enabled, status) to a bucket every day at 02:30 UTC, kept 90 days. Passwords can't be exported:
+  after a loss, people are created again and choose new passwords.
 
 ## Why one API Lambda, not native AppSync resolvers
 
