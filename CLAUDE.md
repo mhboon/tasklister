@@ -19,7 +19,7 @@ This file is *how* to work here. Same conventions as the sibling popla repo.
   `HOSTED_ZONE_ID` env var / GitHub Actions variable. The zone name and site
   domain likewise come from `HOSTED_ZONE_NAME` and `SITE_DOMAIN`.
 - There is no separate QA environment: everything deploys straight to the one
-  account. Be careful with changes to tables (all `RETAIN` + PITR).
+  account. Be careful with changes to tables (all `RETAIN` + PITR + deletion protection, backed up daily).
 - The CSP (`infra/lib/web-stack.ts`) forbids inline styles and third-party
   origins. Don't use React `style={}` props; use CSS classes.
 

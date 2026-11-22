@@ -83,3 +83,20 @@ test('a very long link leaves no room: the page title becomes the title', () => 
   assert.equal(r.title, 'Page');
   assert.ok(r.notes.startsWith(url));
 });
+
+import { buildUserExport } from '../lambda/shared/user-export';
+
+test('the user export carries role, status and enabled state, sorted by email', () => {
+  const u = (sub: string, email: string, extra = {}) =>
+    ({ Username: email, Attributes: [{ Name: 'sub', Value: sub }, { Name: 'email', Value: email }], UserStatus: 'CONFIRMED', Enabled: true, ...extra }) as never;
+  const rows = buildUserExport(
+    [u('3', 'zed@x.com'), u('1', 'amy@x.com'), u('2', 'bob@x.com', { Enabled: false, UserStatus: 'FORCE_CHANGE_PASSWORD' })],
+    new Set(['1']),
+    new Set(['2'])
+  );
+  assert.deepEqual(rows.map((r) => [r.email, r.role, r.enabled, r.status]), [
+    ['amy@x.com', 'ADMIN', true, 'CONFIRMED'],
+    ['bob@x.com', 'USER', false, 'FORCE_CHANGE_PASSWORD'],
+    ['zed@x.com', 'GUEST', true, 'CONFIRMED'],
+  ]);
+});

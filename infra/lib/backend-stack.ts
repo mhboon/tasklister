@@ -7,6 +7,8 @@ import * as appsync from 'aws-cdk-lib/aws-appsync';
 import * as lambda from 'aws-cdk-lib/aws-lambda';
 import * as iam from 'aws-cdk-lib/aws-iam';
 import * as events from 'aws-cdk-lib/aws-events';
+import * as backup from 'aws-cdk-lib/aws-backup';
+import * as s3 from 'aws-cdk-lib/aws-s3';
 import * as targets from 'aws-cdk-lib/aws-events-targets';
 import { NodejsFunction } from 'aws-cdk-lib/aws-lambda-nodejs';
 
@@ -40,6 +42,8 @@ export class TasklisterBackendStack extends Stack {
         billingMode: dynamodb.BillingMode.PAY_PER_REQUEST,
         removalPolicy: RemovalPolicy.RETAIN,
         pointInTimeRecoverySpecification: { pointInTimeRecoveryEnabled: true },
+        // RETAIN guards against deleting the stack; this guards against deleting the table itself.
+        deletionProtection: true,
       });
 
     const usersTable = table('UsersTable', 'TasklisterUsers', 'userId');
@@ -188,6 +192,55 @@ export class TasklisterBackendStack extends Stack {
     new events.Rule(this, 'RecurringSchedule', {
       schedule: events.Schedule.cron({ minute: '0', hour: '3' }),
       targets: [new targets.LambdaFunction(recurringFn, { retryAttempts: 2 })],
+    });
+
+    // ---- Backups ----
+    // Point-in-time recovery (35 days, DynamoDB's maximum) covers recent mistakes.
+    // On top of that, a daily backup is kept for 90 days.
+    const vault = new backup.BackupVault(this, 'BackupVault', {
+      backupVaultName: 'TasklisterBackupVault',
+      removalPolicy: RemovalPolicy.RETAIN,
+    });
+    const plan = new backup.BackupPlan(this, 'DailyBackup', { backupPlanName: 'TasklisterDaily' });
+    plan.addRule(
+      new backup.BackupPlanRule({
+        ruleName: 'Daily90Days',
+        backupVault: vault,
+        scheduleExpression: events.Schedule.cron({ minute: '0', hour: '2' }),
+        deleteAfter: Duration.days(90),
+      })
+    );
+    plan.addSelection('Tables', {
+      resources: [usersTable, foldersTable, listsTable, membersTable, itemsTable, recurringTable, mailboxesTable].map((t) =>
+        backup.BackupResource.fromDynamoDbTable(t)
+      ),
+    });
+
+    // Cognito has no backup of its own: every day, who may sign in and with which role goes to a bucket.
+    // (Passwords can't be exported: after a loss, people are created again with new temporary passwords.)
+    const exportBucket = new s3.Bucket(this, 'ExportBucket', {
+      blockPublicAccess: s3.BlockPublicAccess.BLOCK_ALL,
+      enforceSSL: true,
+      encryption: s3.BucketEncryption.S3_MANAGED,
+      removalPolicy: RemovalPolicy.RETAIN,
+      lifecycleRules: [{ expiration: Duration.days(90) }],
+    });
+    const exportFn = new NodejsFunction(this, 'UserExportFn', {
+      entry: path.join(__dirname, '../lambda/export/users.ts'),
+      runtime: lambda.Runtime.NODEJS_22_X,
+      timeout: Duration.seconds(60),
+      environment: { USER_POOL_ID: userPool.userPoolId, EXPORT_BUCKET: exportBucket.bucketName },
+    });
+    exportBucket.grantPut(exportFn);
+    exportFn.addToRolePolicy(
+      new iam.PolicyStatement({
+        actions: ['cognito-idp:ListUsers', 'cognito-idp:ListUsersInGroup'],
+        resources: [userPool.userPoolArn],
+      })
+    );
+    new events.Rule(this, 'UserExportSchedule', {
+      schedule: events.Schedule.cron({ minute: '30', hour: '2' }),
+      targets: [new targets.LambdaFunction(exportFn, { retryAttempts: 2 })],
     });
 
     new CfnOutput(this, 'ApiUrl', { value: api.graphqlUrl });
